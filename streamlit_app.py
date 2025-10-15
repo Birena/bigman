@@ -18,7 +18,7 @@ st.set_page_config(
     }
 )
 
-# Hide all Streamlit branding
+# Minimal CSS - only hide branding, keep sidebar
 st.markdown("""
 <style>
     /* Hide Streamlit header */
@@ -29,42 +29,6 @@ st.markdown("""
     /* Hide Streamlit footer */
     .stApp > footer {
         display: none;
-    }
-    
-    /* Hide Streamlit branding in sidebar but keep sidebar */
-    .stSidebar > div:first-child {
-        display: none;
-    }
-    
-    /* Ensure sidebar is visible and functional */
-    .stSidebar {
-        display: block !important;
-        visibility: visible !important;
-    }
-    
-    /* Make sure sidebar content is visible */
-    .stSidebar .stSelectbox {
-        display: block !important;
-    }
-    
-    /* Hide Streamlit menu */
-    .stApp > div:first-child {
-        display: none;
-    }
-    
-    /* Hide Streamlit URL bar */
-    .stApp > div[data-testid="stHeader"] {
-        display: none;
-    }
-    
-    /* Hide Streamlit status */
-    .stApp > div[data-testid="stStatusWidget"] {
-        display: none;
-    }
-    
-    /* Custom styling */
-    .main > div {
-        padding-top: 0rem;
     }
     
     /* Hide Streamlit watermark */
@@ -87,17 +51,6 @@ st.markdown("""
         margin-bottom: 2rem;
         font-size: 1.5rem;
         font-weight: bold;
-    }
-    
-    /* Ensure main content is visible */
-    .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    
-    /* Make sure content is not hidden */
-    .stApp > div:last-child {
-        display: block !important;
     }
 </style>
 """, unsafe_allow_html=True)
