@@ -1,18 +1,4 @@
-# Add the modified file
-git add streamlit_app.py
-
-# Commit with a message
-git commit -m "Add version 1.1 caption"
-
-# Push the changes
-git push# Add the modified file
-git add streamlit_app.py
-
-# Commit with a message
-git commit -m "Add version 1.1 caption"
-
-# Push the changes
-git pushimport streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
@@ -28,6 +14,7 @@ st.set_page_config(
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
+st.caption("Version 1.1")
 
 # Load configuration
 @st.cache_data
