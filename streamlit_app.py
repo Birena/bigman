@@ -1,4 +1,18 @@
-import streamlit as st
+# Add the modified file
+git add streamlit_app.py
+
+# Commit with a message
+git commit -m "Add version 1.1 caption"
+
+# Push the changes
+git push# Add the modified file
+git add streamlit_app.py
+
+# Commit with a message
+git commit -m "Add version 1.1 caption"
+
+# Push the changes
+git pushimport streamlit as st
 import pandas as pd
 import numpy as np
 import requests
