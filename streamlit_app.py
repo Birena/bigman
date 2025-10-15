@@ -5,13 +5,38 @@ import requests
 import json
 import configparser
 import os
+import hmac
 
+# Must be the first Streamlit command
 st.set_page_config(
-    page_title="Oak Furniture Land GMC Feed Optimizer",
+    page_title="🔒 Oak Furniture Land GMC Feed Optimizer",
     page_icon="🛒",
     layout="wide"
 )
 
+def check_password():
+    """Returns `True` if the user had the correct password."""
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if not st.session_state["password_correct"]:
+        # First attempt, show input boxes
+        st.markdown("## 🔒 Login Required")
+        username = st.text_input("Username", key="username")
+        password = st.text_input("Password", type="password", key="password")
+        if st.button("Login"):
+            if username == st.secrets["username"] and password == st.secrets["password"]:
+                st.session_state["password_correct"] = True
+                st.experimental_rerun()
+            else:
+                st.error("❌ Invalid username or password")
+        st.stop()  # Stop execution here if not authenticated
+    return True
+
+# Check password before showing anything else
+check_password()
+
+# Only show the rest of your app after authentication succeeds
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
 
@@ -171,67 +196,44 @@ elif page == "Sitebulb Upload":
 elif page == "SEOMonitor API":
     st.header("📈 SEOMonitor API Integration")
     
-    st.subheader("🔑 API Configuration")
+    # Debug logging container at the top
+    debug_log = st.empty()
     
-    # Try to load config
     try:
         config = load_config()
-        api_key = config['SEOMonitor']['api_key']
-        campaign_id = config['SEOMonitor']['campaign_id']
-        brand_name = config['Brand']['name']
+        st.success(f"✅ API configured for {config['Brand']['name']}")
+        st.info(f"Campaign ID: {config['SEOMonitor']['campaign_id']}")
         
-        st.success(f"✅ API configured for {brand_name}")
-        st.info(f"Campaign ID: {campaign_id}")
-        
+        if st.button("🔍 Fetch Keyword Rankings"):
+            debug_log.write("Starting API request...")
+            base_url = "https://api.seomonitor.com/v3"
+            endpoint = f"/campaigns/{config['SEOMonitor']['campaign_id']}/keywords/ranking"
+            
+            headers = {
+                'Authorization': f"Bearer {config['SEOMonitor']['api_key']}",
+                'Accept': 'application/json'
+            }
+            
+            try:
+                debug_log.write(f"Requesting: {base_url}{endpoint}")
+                response = requests.get(
+                    f"{base_url}{endpoint}",
+                    headers=headers,
+                    timeout=30
+                )
+                
+                # Show full response details for debugging
+                debug_log.json({
+                    "status_code": response.status_code,
+                    "headers": dict(response.headers),
+                    "response": response.json() if response.status_code == 200 else response.text
+                })
+                
+            except Exception as e:
+                debug_log.error(f"API request failed: {str(e)}")
+                
     except Exception as e:
-        st.error(f"❌ Config file not found: {str(e)}")
-        api_key = None
-        campaign_id = None
-    
-    if api_key and campaign_id:
-        st.subheader("📊 Available Data")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("🔍 Fetch Keyword Rankings"):
-                try:
-                    # SEOMonitor API call for keyword rankings
-                    url = f"https://api.seomonitor.com/v1/campaigns/{campaign_id}/keywords"
-                    headers = {
-                        'Authorization': f'Bearer {api_key}',
-                        'Content-Type': 'application/json'
-                    }
-                    
-                    response = requests.get(url, headers=headers)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        
-                        # Convert to DataFrame
-                        if 'keywords' in data:
-                            keywords_data = []
-                            for kw in data['keywords']:
-                                keywords_data.append({
-                                    'keyword': kw.get('keyword', ''),
-                                    'position': kw.get('position', 0),
-                                    'volume': kw.get('search_volume', 0),
-                                    'difficulty': kw.get('difficulty', 0),
-                                    'url': kw.get('url', '')
-                                })
-                            
-                            df_keywords = pd.DataFrame(keywords_data)
-                            st.session_state['seomonitor_data'] = df_keywords
-                            
-                            st.success(f"✅ Fetched {len(df_keywords)} keywords!")
-                            st.dataframe(df_keywords.head(10))
-                        else:
-                            st.warning("No keyword data found in response")
-                    else:
-                        st.error(f"❌ API Error: {response.status_code}")
-                        
-                except Exception as e:
-                    st.error(f"❌ API Error: {str(e)}")
+        st.error(f"Configuration error: {str(e)}")
 
 elif page == "Search Volume Analysis":
     st.header("📊 Search Volume Analysis")
