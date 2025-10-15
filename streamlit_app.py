@@ -131,10 +131,7 @@ if not st.session_state['authenticated']:
                 st.error("❌ Invalid username or password")
     
     st.markdown("---")
-    st.markdown("**Available Accounts:**")
-    st.markdown("- Username: `oakfurniture` | Password: `OFL2024!`")
-    st.markdown("- Username: `admin` | Password: `Admin123!`")
-    st.markdown("- Username: `seo` | Password: `SEO2024!`")
+    st.markdown("**Contact your administrator for access credentials.**")
     
     st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
