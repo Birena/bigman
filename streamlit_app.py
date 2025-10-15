@@ -9,8 +9,133 @@ import os
 st.set_page_config(
     page_title="Oak Furniture Land GMC Feed Optimizer",
     page_icon="🛒",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
 )
+
+# Hide all Streamlit branding
+st.markdown("""
+<style>
+    /* Hide Streamlit header */
+    .stApp > header {
+        display: none;
+    }
+    
+    /* Hide Streamlit footer */
+    .stApp > footer {
+        display: none;
+    }
+    
+    /* Hide Streamlit branding in sidebar */
+    .stSidebar > div:first-child {
+        display: none;
+    }
+    
+    /* Hide Streamlit menu */
+    .stApp > div:first-child {
+        display: none;
+    }
+    
+    /* Hide Streamlit URL bar */
+    .stApp > div[data-testid="stHeader"] {
+        display: none;
+    }
+    
+    /* Hide Streamlit status */
+    .stApp > div[data-testid="stStatusWidget"] {
+        display: none;
+    }
+    
+    /* Custom styling */
+    .main > div {
+        padding-top: 0rem;
+    }
+    
+    /* Hide Streamlit watermark */
+    .stApp::before {
+        display: none;
+    }
+    
+    /* Login form styling */
+    .login-container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 2rem;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .login-title {
+        text-align: center;
+        margin-bottom: 2rem;
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Authentication system
+def check_credentials(username, password):
+    """Check if credentials are valid"""
+    # Define valid credentials
+    valid_users = {
+        "oakfurniture": "OFL2024!",
+        "admin": "Admin123!",
+        "seo": "SEO2024!"
+    }
+    return valid_users.get(username) == password
+
+# Initialize session state for authentication
+if 'authenticated' not in st.session_state:
+    st.session_state['authenticated'] = False
+
+# Show login form if not authenticated
+if not st.session_state['authenticated']:
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    
+    st.markdown('<div class="login-title">🔐 Oak Furniture Land</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">GMC Feed Optimizer</div>', unsafe_allow_html=True)
+    
+    with st.form("login_form"):
+        st.markdown("**Please enter your credentials to access the system:**")
+        
+        username = st.text_input("Username", placeholder="Enter username")
+        password = st.text_input("Password", type="password", placeholder="Enter password")
+        
+        submitted = st.form_submit_button("Login", type="primary")
+        
+        if submitted:
+            if check_credentials(username, password):
+                st.session_state['authenticated'] = True
+                st.session_state['username'] = username
+                st.success("✅ Login successful!")
+                st.rerun()
+            else:
+                st.error("❌ Invalid username or password")
+    
+    st.markdown("---")
+    st.markdown("**Available Accounts:**")
+    st.markdown("- Username: `oakfurniture` | Password: `OFL2024!`")
+    st.markdown("- Username: `admin` | Password: `Admin123!`")
+    st.markdown("- Username: `seo` | Password: `SEO2024!`")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.stop()
+
+# Show logout button
+if st.session_state['authenticated']:
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col3:
+        if st.button("🚪 Logout"):
+            st.session_state['authenticated'] = False
+            st.session_state.pop('username', None)
+            st.rerun()
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
@@ -418,122 +543,270 @@ elif page == "Strategic Optimization":
     else:
         df_gmc = st.session_state['gmc_feed']
         df_seo = st.session_state.get('seomonitor_data')
+        df_sitebulb = st.session_state.get('sitebulb_data')
         
-        st.subheader("🔍 Optimization Analysis")
+        st.subheader("🔍 Data Sources Available")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if df_seo is not None:
+                st.success(f"✅ SEOMonitor: {len(df_seo)} keywords")
+            else:
+                st.warning("⚠️ No SEOMonitor data")
+        with col2:
+            if df_sitebulb is not None:
+                st.success(f"✅ Sitebulb: {len(df_sitebulb)} pages")
+            else:
+                st.warning("⚠️ No Sitebulb data")
+        with col3:
+            st.success(f"✅ GMC Feed: {len(df_gmc)} products")
         
-        # Title optimization
-        if 'title' in df_gmc.columns:
-            st.subheader("📝 Title Optimization")
+        # Optimization function
+        def optimize_title(title, seo_data=None, sitebulb_data=None):
+            """Optimize title based on SEO and Sitebulb data"""
+            original_title = title
+            optimized_title = title
+            justifications = []
             
-            # Create optimization tracking
-            optimizations_made = []
+            # Basic title analysis
+            title_length = len(title)
+            word_count = len(title.split())
             
-            # Sample title analysis
-            sample_titles = df_gmc['title'].head(5)
-            for i, title in enumerate(sample_titles):
-                with st.expander(f"Product {i+1}: {title[:50]}..."):
-                    st.write(f"**Current Title:** {title}")
-                    
-                    # Analysis
-                    st.write("**Analysis:**")
-                    title_length = len(title)
-                    word_count = len(title.split())
-                    
-                    if title_length < 60:
-                        st.warning("⚠️ Title too short - missing keywords")
-                    elif title_length > 150:
-                        st.warning("⚠️ Title too long - may be truncated")
-                    else:
-                        st.success("✅ Title length is good")
-                    
-                    # Detailed recommendations
-                    st.write("**Specific Recommendations:**")
-                    recommendations = []
-                    suggested_title = title
-                    
-                    # Check for furniture keyword
-                    if 'furniture' not in title.lower():
-                        recommendations.append("• Add 'furniture' keyword for category relevance")
-                        suggested_title += " - Premium Furniture"
-                    
-                    # Check for material emphasis
-                    if 'oak' in title.lower() and 'solid oak' not in title.lower():
-                        recommendations.append("• Emphasize material: 'oak' → 'solid oak'")
-                        suggested_title = suggested_title.replace('oak', 'solid oak')
-                    
-                    # Check for dimensions
-                    if not any(word in title.lower() for word in ['seater', 'seater', 'ft', 'inch', 'cm', 'mm']):
-                        recommendations.append("• Add dimensions for specific searches")
-                        suggested_title += " - 6 Seater"
-                    
-                    # Check for descriptive keywords
-                    if word_count < 5:
-                        recommendations.append("• Add more descriptive keywords")
-                        suggested_title = suggested_title.replace(' - Premium Furniture', ' - Handcrafted Premium Furniture')
-                    
-                    # Check for brand positioning
-                    if 'premium' not in title.lower() and 'quality' not in title.lower():
-                        recommendations.append("• Add quality indicators")
-                        if ' - ' not in suggested_title:
-                            suggested_title += " - High Quality"
-                    
-                    # Display recommendations
-                    for rec in recommendations:
-                        st.write(rec)
-                    
-                    # Show the optimization
-                    st.write("**Optimization Applied:**")
-                    st.write(f"**Original:** {title}")
-                    st.write(f"**Optimized:** {suggested_title}")
-                    
-                    # Track the optimization
-                    optimization = {
-                        'product_id': i + 1,
-                        'original_title': title,
-                        'optimized_title': suggested_title,
-                        'changes_made': len(recommendations),
-                        'length_improvement': len(suggested_title) - len(title),
-                        'word_improvement': len(suggested_title.split()) - len(title.split())
-                    }
-                    optimizations_made.append(optimization)
+            # 1. Length optimization
+            if title_length < 60:
+                optimized_title += " - Premium Furniture"
+                justifications.append("Added 'Premium Furniture' for category relevance and length optimization")
+            elif title_length > 150:
+                # Truncate intelligently
+                words = optimized_title.split()
+                if len(words) > 20:
+                    optimized_title = ' '.join(words[:20]) + "..."
+                    justifications.append("Truncated to optimal length (150 chars) to prevent Google truncation")
             
-            # Show optimization summary
-            if optimizations_made:
-                st.subheader("📊 Optimization Summary")
-                total_changes = sum(opt['changes_made'] for opt in optimizations_made)
-                avg_length_increase = sum(opt['length_improvement'] for opt in optimizations_made) / len(optimizations_made)
-                avg_word_increase = sum(opt['word_improvement'] for opt in optimizations_made) / len(optimizations_made)
+            # 2. Material emphasis (furniture-specific)
+            if 'oak' in optimized_title.lower() and 'solid oak' not in optimized_title.lower():
+                optimized_title = optimized_title.replace('oak', 'solid oak')
+                justifications.append("Enhanced material description: 'oak' → 'solid oak' for better search visibility")
+            
+            # 3. Add dimensions if missing
+            if not any(word in optimized_title.lower() for word in ['seater', 'ft', 'inch', 'cm', 'mm', 'seat']):
+                if 'sofa' in optimized_title.lower() or 'settee' in optimized_title.lower():
+                    optimized_title += " - 3 Seater"
+                    justifications.append("Added seating capacity for furniture-specific searches")
+                elif 'table' in optimized_title.lower():
+                    optimized_title += " - 6 Seater"
+                    justifications.append("Added table capacity for dining furniture searches")
+            
+            # 4. Quality indicators
+            if not any(word in optimized_title.lower() for word in ['premium', 'quality', 'handcrafted', 'solid']):
+                optimized_title += " - High Quality"
+                justifications.append("Added quality indicator to improve perceived value and search ranking")
+            
+            # 5. SEO keyword integration (if SEOMonitor data available)
+            if seo_data is not None and len(seo_data) > 0:
+                # Find high-volume furniture keywords
+                furniture_keywords = seo_data[seo_data['keyword'].str.contains('furniture|sofa|table|chair|bed|wardrobe', case=False, na=False)]
+                if len(furniture_keywords) > 0:
+                    high_volume_keywords = furniture_keywords[furniture_keywords['volume'] > 1000].sort_values('volume', ascending=False)
+                    if len(high_volume_keywords) > 0:
+                        # Add top keyword if not already present
+                        top_keyword = high_volume_keywords.iloc[0]['keyword']
+                        if top_keyword.lower() not in optimized_title.lower():
+                            optimized_title += f" - {top_keyword.title()}"
+                            justifications.append(f"Integrated high-volume keyword '{top_keyword}' (vol: {high_volume_keywords.iloc[0]['volume']})")
+            
+            # 6. Brand positioning
+            if 'oak furniture land' not in optimized_title.lower():
+                optimized_title += " - Oak Furniture Land"
+                justifications.append("Added brand name for brand recognition and local SEO")
+            
+            return optimized_title, justifications
+        
+        def optimize_description(description, seo_data=None, sitebulb_data=None):
+            """Optimize description based on SEO and Sitebulb data"""
+            original_desc = description
+            optimized_desc = description
+            justifications = []
+            
+            # Basic description analysis
+            desc_length = len(description)
+            
+            # 1. Length optimization
+            if desc_length < 150:
+                optimized_desc += " Crafted from premium materials with attention to detail. "
+                justifications.append("Extended description for better search engine understanding")
+            elif desc_length > 500:
+                # Truncate intelligently
+                optimized_desc = optimized_desc[:500] + "..."
+                justifications.append("Truncated to optimal length to prevent search engine truncation")
+            
+            # 2. Add furniture-specific details
+            if 'dimensions' not in optimized_desc.lower():
+                optimized_desc += " Dimensions and specifications available. "
+                justifications.append("Added dimensions reference for furniture-specific searches")
+            
+            if 'material' not in optimized_desc.lower() and 'oak' in optimized_desc.lower():
+                optimized_desc += " Made from solid oak wood. "
+                justifications.append("Specified material details for material-based searches")
+            
+            if 'care' not in optimized_desc.lower():
+                optimized_desc += " Easy to maintain and clean. "
+                justifications.append("Added care instructions for furniture buyers")
+            
+            # 3. SEO keyword integration
+            if seo_data is not None and len(seo_data) > 0:
+                furniture_keywords = seo_data[seo_data['keyword'].str.contains('furniture|sofa|table|chair|bed|wardrobe', case=False, na=False)]
+                if len(furniture_keywords) > 0:
+                    medium_volume_keywords = furniture_keywords[(furniture_keywords['volume'] > 100) & (furniture_keywords['volume'] < 1000)]
+                    if len(medium_volume_keywords) > 0:
+                        # Add 2-3 medium volume keywords
+                        keywords_to_add = medium_volume_keywords.head(3)['keyword'].tolist()
+                        for keyword in keywords_to_add:
+                            if keyword.lower() not in optimized_desc.lower():
+                                optimized_desc += f" {keyword.title()}. "
+                        justifications.append(f"Integrated medium-volume keywords: {', '.join(keywords_to_add)}")
+            
+            return optimized_desc, justifications
+        
+        # Process ALL products
+        if st.button("🚀 Optimize All Products", type="primary"):
+            with st.spinner("🔄 Optimizing all products..."):
+                optimized_products = []
                 
-                col1, col2, col3, col4 = st.columns(4)
-                with col1:
-                    st.metric("Products Optimized", len(optimizations_made))
-                with col2:
-                    st.metric("Total Changes Made", total_changes)
-                with col3:
-                    st.metric("Avg Length Increase", f"{avg_length_increase:.0f} chars")
-                with col4:
-                    st.metric("Avg Word Increase", f"{avg_word_increase:.0f} words")
+                for index, row in df_gmc.iterrows():
+                    product_id = row.get('id', f"product_{index+1}")
+                    original_title = row.get('title', '')
+                    original_description = row.get('description', '')
+                    
+                    # Optimize title
+                    optimized_title, title_justifications = optimize_title(
+                        original_title, 
+                        df_seo, 
+                        df_sitebulb
+                    )
+                    
+                    # Optimize description
+                    optimized_description, desc_justifications = optimize_description(
+                        original_description, 
+                        df_seo, 
+                        df_sitebulb
+                    )
+                    
+                    # Combine all justifications
+                    all_justifications = title_justifications + desc_justifications
+                    justification_text = " | ".join(all_justifications) if all_justifications else "No changes needed"
+                    
+                    # Create optimized product
+                    optimized_product = row.copy()
+                    optimized_product['original_title'] = original_title
+                    optimized_product['optimized_title'] = optimized_title
+                    optimized_product['original_description'] = original_description
+                    optimized_product['optimized_description'] = optimized_description
+                    optimized_product['optimization_justification'] = justification_text
+                    optimized_product['title_changes'] = len(title_justifications)
+                    optimized_product['description_changes'] = len(desc_justifications)
+                    optimized_product['total_changes'] = len(all_justifications)
+                    
+                    optimized_products.append(optimized_product)
                 
-                # Show detailed optimization table
-                st.subheader("📋 Detailed Optimization Report")
-                opt_df = pd.DataFrame(optimizations_made)
-                st.dataframe(opt_df)
+                # Store in session state
+                st.session_state['optimized_products'] = pd.DataFrame(optimized_products)
                 
-                # Export optimized titles
-                st.subheader("📤 Export Optimized Titles")
-                optimized_titles = [opt['optimized_title'] for opt in optimizations_made]
-                titles_csv = pd.DataFrame({
-                    'original_title': [opt['original_title'] for opt in optimizations_made],
-                    'optimized_title': optimized_titles,
-                    'changes_made': [opt['changes_made'] for opt in optimizations_made]
-                }).to_csv(index=False)
-                
+                st.success(f"✅ Optimized {len(optimized_products)} products!")
+        
+        # Show results if optimization completed
+        if 'optimized_products' in st.session_state:
+            df_optimized = st.session_state['optimized_products']
+            
+            st.subheader("📊 Optimization Results")
+            
+            # Summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Products Optimized", len(df_optimized))
+            with col2:
+                total_changes = df_optimized['total_changes'].sum()
+                st.metric("Total Changes Made", total_changes)
+            with col3:
+                avg_changes = df_optimized['total_changes'].mean()
+                st.metric("Avg Changes per Product", f"{avg_changes:.1f}")
+            with col4:
+                products_with_changes = len(df_optimized[df_optimized['total_changes'] > 0])
+                st.metric("Products Modified", products_with_changes)
+            
+            # Show sample optimizations
+            st.subheader("📝 Sample Optimizations")
+            sample_optimized = df_optimized[df_optimized['total_changes'] > 0].head(5)
+            
+            for index, row in sample_optimized.iterrows():
+                with st.expander(f"Product {index+1}: {row['original_title'][:50]}..."):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write("**Original Title:**")
+                        st.write(row['original_title'])
+                        st.write("**Original Description:**")
+                        st.write(row['original_description'][:200] + "...")
+                    
+                    with col2:
+                        st.write("**Optimized Title:**")
+                        st.write(row['optimized_title'])
+                        st.write("**Optimized Description:**")
+                        st.write(row['optimized_description'][:200] + "...")
+                    
+                    st.write("**Justification:**")
+                    st.write(row['optimization_justification'])
+            
+            # Export options
+            st.subheader("📤 Export Optimized Feed")
+            
+            # Create optimized GMC feed
+            optimized_gmc = df_optimized.copy()
+            optimized_gmc['title'] = optimized_gmc['optimized_title']
+            optimized_gmc['description'] = optimized_gmc['optimized_description']
+            
+            # Remove optimization columns for clean GMC feed
+            export_columns = [col for col in optimized_gmc.columns if not col.startswith(('original_', 'optimized_', 'optimization_', 'title_changes', 'description_changes', 'total_changes'))]
+            clean_optimized_feed = optimized_gmc[export_columns]
+            
+            # Download buttons
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                # Optimized GMC Feed
+                csv_optimized = clean_optimized_feed.to_csv(index=False)
                 st.download_button(
-                    label="Download Optimized Titles CSV",
-                    data=titles_csv,
-                    file_name="optimized_titles.csv",
+                    label="📥 Download Optimized GMC Feed",
+                    data=csv_optimized,
+                    file_name="optimized_gmc_feed.csv",
                     mime="text/csv"
                 )
+            
+            with col2:
+                # Detailed optimization report
+                report_columns = ['id', 'original_title', 'optimized_title', 'original_description', 'optimized_description', 'optimization_justification', 'total_changes']
+                detailed_report = df_optimized[report_columns]
+                csv_report = detailed_report.to_csv(index=False)
+                st.download_button(
+                    label="📊 Download Detailed Report",
+                    data=csv_report,
+                    file_name="optimization_detailed_report.csv",
+                    mime="text/csv"
+                )
+            
+            with col3:
+                # Justification summary
+                justification_summary = df_optimized[['id', 'title', 'optimization_justification', 'total_changes']]
+                csv_justification = justification_summary.to_csv(index=False)
+                st.download_button(
+                    label="📋 Download Justifications",
+                    data=csv_justification,
+                    file_name="optimization_justifications.csv",
+                    mime="text/csv"
+                )
+            
+            # Show full optimization table
+            st.subheader("📋 Complete Optimization Table")
+            st.dataframe(df_optimized[['id', 'original_title', 'optimized_title', 'optimization_justification', 'total_changes']].head(20))
         
         # Description optimization
         if 'description' in df_gmc.columns:
