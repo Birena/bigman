@@ -93,7 +93,7 @@ elif page == "GMC Feed Upload":
                 df = pd.read_csv(uploaded_file)
             elif uploaded_file.name.endswith('.xml'):
                 st.info("XML files will be processed in the next update")
-                return
+                st.stop()
             else:
                 df = pd.read_excel(uploaded_file)
             
