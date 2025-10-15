@@ -5,38 +5,13 @@ import requests
 import json
 import configparser
 import os
-import hmac
 
-# Must be the first Streamlit command
 st.set_page_config(
-    page_title="🔒 Oak Furniture Land GMC Feed Optimizer",
+    page_title="Oak Furniture Land GMC Feed Optimizer",
     page_icon="🛒",
     layout="wide"
 )
 
-def check_password():
-    """Returns `True` if the user had the correct password."""
-    if "password_correct" not in st.session_state:
-        st.session_state["password_correct"] = False
-
-    if not st.session_state["password_correct"]:
-        # First attempt, show input boxes
-        st.markdown("## 🔒 Login Required")
-        username = st.text_input("Username", key="username")
-        password = st.text_input("Password", type="password", key="password")
-        if st.button("Login"):
-            if username == st.secrets["username"] and password == st.secrets["password"]:
-                st.session_state["password_correct"] = True
-                st.experimental_rerun()
-            else:
-                st.error("❌ Invalid username or password")
-        st.stop()  # Stop execution here if not authenticated
-    return True
-
-# Check password before showing anything else
-check_password()
-
-# Only show the rest of your app after authentication succeeds
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
 
@@ -196,44 +171,156 @@ elif page == "Sitebulb Upload":
 elif page == "SEOMonitor API":
     st.header("📈 SEOMonitor API Integration")
     
-    # Debug logging container at the top
-    debug_log = st.empty()
+    st.subheader("🔑 API Configuration")
     
+    # Try to load config
     try:
         config = load_config()
-        st.success(f"✅ API configured for {config['Brand']['name']}")
-        st.info(f"Campaign ID: {config['SEOMonitor']['campaign_id']}")
+        api_key = config['SEOMonitor']['api_key']
+        campaign_id = config['SEOMonitor']['campaign_id']
+        brand_name = config['Brand']['name']
         
-        if st.button("🔍 Fetch Keyword Rankings"):
-            debug_log.write("Starting API request...")
-            base_url = "https://api.seomonitor.com/v3"
-            endpoint = f"/campaigns/{config['SEOMonitor']['campaign_id']}/keywords/ranking"
-            
-            headers = {
-                'Authorization': f"Bearer {config['SEOMonitor']['api_key']}",
-                'Accept': 'application/json'
-            }
-            
-            try:
-                debug_log.write(f"Requesting: {base_url}{endpoint}")
-                response = requests.get(
-                    f"{base_url}{endpoint}",
-                    headers=headers,
-                    timeout=30
-                )
-                
-                # Show full response details for debugging
-                debug_log.json({
-                    "status_code": response.status_code,
-                    "headers": dict(response.headers),
-                    "response": response.json() if response.status_code == 200 else response.text
-                })
-                
-            except Exception as e:
-                debug_log.error(f"API request failed: {str(e)}")
-                
+        st.success(f"✅ API configured for {brand_name}")
+        st.info(f"Campaign ID: {campaign_id}")
+        
     except Exception as e:
-        st.error(f"Configuration error: {str(e)}")
+        st.error(f"❌ Config file not found: {str(e)}")
+        api_key = None
+        campaign_id = None
+    
+    if api_key and campaign_id:
+        st.subheader("📊 Available Data")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🔍 Fetch Keyword Rankings"):
+                # Create logging container
+                log_container = st.empty()
+                
+                with st.spinner("🔄 Fetching keyword data..."):
+                    # Use the working API endpoint from your files
+                    url = "https://apigw.seomonitor.com/v3/rank-tracker/v3.0/keywords"
+                    
+                    # Correct headers based on working code
+                    headers = {
+                        "Authorization": api_key,  # Direct API key, not Bearer
+                        "X-Token": api_key,        # Some tenants expect X-Token
+                        "Accept": "application/json"
+                    }
+                    
+                    # Required date parameters
+                    from datetime import datetime, timedelta
+                    end_date = datetime.today().date()
+                    start_date = end_date - timedelta(days=30)
+                    
+                    params = {
+                        "campaign_id": campaign_id,
+                        "start_date": start_date.isoformat(),
+                        "end_date": end_date.isoformat(),
+                        "include_all_groups": "true",
+                        "limit": 200,
+                        "offset": 0
+                    }
+                    
+                    # Log the request details
+                    log_container.write("🔍 **API Request Details:**")
+                    log_container.write(f"**URL:** {url}")
+                    log_container.write(f"**Headers:** {headers}")
+                    log_container.write(f"**Params:** {params}")
+                    log_container.write("---")
+                    
+                    try:
+                        log_container.write("📡 **Making API request...**")
+                        response = requests.get(url, headers=headers, params=params, timeout=30)
+                        
+                        log_container.write(f"📊 **Response Status:** {response.status_code}")
+                        log_container.write(f"📊 **Response Headers:** {dict(response.headers)}")
+                        
+                        if response.status_code == 200:
+                            log_container.write("✅ **Success! Processing response...**")
+                            data = response.json()
+                            
+                            log_container.write(f"📋 **Response Type:** {type(data)}")
+                            log_container.write(f"📋 **Response Length:** {len(data) if isinstance(data, (list, dict)) else 'N/A'}")
+                            
+                            # Show first few items for debugging
+                            if isinstance(data, list) and data:
+                                log_container.write("📋 **Sample Response Items:**")
+                                log_container.json(data[:2])
+                            elif isinstance(data, dict):
+                                log_container.write("📋 **Response Structure:**")
+                                log_container.json(data)
+                            
+                            # Process the data based on working code structure
+                            if isinstance(data, list) and data:
+                                keywords_data = []
+                                log_container.write(f"🔄 **Processing {len(data)} items...**")
+                                
+                                for i, item in enumerate(data):
+                                    keyword = item.get("keyword", "").strip()
+                                    if keyword:
+                                        search_data = item.get("search_data", {})
+                                        keywords_data.append({
+                                            'keyword': keyword,
+                                            'position': item.get("position", 0),
+                                            'volume': search_data.get("search_volume", 0),
+                                            'difficulty': search_data.get("difficulty", 0),
+                                            'yoy': search_data.get("year_over_year", 0),
+                                            'url': item.get("url", "")
+                                        })
+                                    
+                                    # Log progress every 50 items
+                                    if (i + 1) % 50 == 0:
+                                        log_container.write(f"🔄 **Processed {i + 1}/{len(data)} items...**")
+                                
+                                log_container.write(f"✅ **Processed {len(keywords_data)} keywords successfully!**")
+                                
+                                if keywords_data:
+                                    df_keywords = pd.DataFrame(keywords_data)
+                                    st.session_state['seomonitor_data'] = df_keywords
+                                    
+                                    st.success(f"✅ Fetched {len(df_keywords)} keywords!")
+                                    st.dataframe(df_keywords.head(10))
+                                    
+                                    # Show summary stats
+                                    col1, col2, col3 = st.columns(3)
+                                    with col1:
+                                        st.metric("Total Keywords", len(df_keywords))
+                                    with col2:
+                                        avg_volume = df_keywords['volume'].mean()
+                                        st.metric("Avg Search Volume", f"{avg_volume:.0f}")
+                                    with col3:
+                                        high_volume = len(df_keywords[df_keywords['volume'] > 1000])
+                                        st.metric("High Volume (>1K)", high_volume)
+                                    
+                                    # Clear the log container after success
+                                    log_container.empty()
+                                else:
+                                    st.warning("No keyword data found in response")
+                                    log_container.write("⚠️ **No valid keywords found in response**")
+                                    log_container.json(data[:2] if data else "Empty response")
+                            else:
+                                st.warning("No keyword data found in response")
+                                log_container.write("⚠️ **Unexpected response format**")
+                                log_container.json(data if isinstance(data, dict) else "Unexpected response format")
+                        else:
+                            st.error(f"❌ API Error: {response.status_code}")
+                            log_container.write(f"❌ **API Error Details:**")
+                            log_container.write(f"**Status Code:** {response.status_code}")
+                            log_container.write(f"**Response Text:** {response.text}")
+                            log_container.write(f"**Response Headers:** {dict(response.headers)}")
+                            
+                    except Exception as e:
+                        st.error(f"❌ API Error: {str(e)}")
+                        log_container.write(f"❌ **Exception Details:**")
+                        log_container.write(f"**Error Type:** {type(e).__name__}")
+                        log_container.write(f"**Error Message:** {str(e)}")
+                        log_container.write("**Possible issues:**")
+                        log_container.write("- Network connection problem")
+                        log_container.write("- API key might be incorrect")
+                        log_container.write("- Campaign ID might not exist")
+                        log_container.write("- API endpoint might be down")
 
 elif page == "Search Volume Analysis":
     st.header("📊 Search Volume Analysis")
