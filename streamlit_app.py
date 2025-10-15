@@ -424,6 +424,9 @@ elif page == "Strategic Optimization":
         if 'title' in df_gmc.columns:
             st.subheader("📝 Title Optimization")
             
+            # Create optimization tracking
+            optimizations_made = []
+            
             # Sample title analysis
             sample_titles = df_gmc['title'].head(5)
             for i, title in enumerate(sample_titles):
@@ -432,25 +435,104 @@ elif page == "Strategic Optimization":
                     
                     # Analysis
                     st.write("**Analysis:**")
-                    if len(title) < 60:
+                    title_length = len(title)
+                    word_count = len(title.split())
+                    
+                    if title_length < 60:
                         st.warning("⚠️ Title too short - missing keywords")
-                    elif len(title) > 150:
+                    elif title_length > 150:
                         st.warning("⚠️ Title too long - may be truncated")
                     else:
                         st.success("✅ Title length is good")
                     
-                    # Recommendations
-                    st.write("**Recommendations:**")
-                    if 'furniture' not in title.lower():
-                        st.write("• Add 'furniture' keyword for category relevance")
-                    if 'oak' not in title.lower() and 'oak' in title.lower():
-                        st.write("• Emphasize material (oak) for material-specific searches")
-                    if len(title.split()) < 5:
-                        st.write("• Add more descriptive keywords")
+                    # Detailed recommendations
+                    st.write("**Specific Recommendations:**")
+                    recommendations = []
+                    suggested_title = title
                     
-                    # Suggested title
-                    suggested_title = f"{title} - Premium Furniture" if 'furniture' not in title.lower() else title
-                    st.write(f"**Suggested Title:** {suggested_title}")
+                    # Check for furniture keyword
+                    if 'furniture' not in title.lower():
+                        recommendations.append("• Add 'furniture' keyword for category relevance")
+                        suggested_title += " - Premium Furniture"
+                    
+                    # Check for material emphasis
+                    if 'oak' in title.lower() and 'solid oak' not in title.lower():
+                        recommendations.append("• Emphasize material: 'oak' → 'solid oak'")
+                        suggested_title = suggested_title.replace('oak', 'solid oak')
+                    
+                    # Check for dimensions
+                    if not any(word in title.lower() for word in ['seater', 'seater', 'ft', 'inch', 'cm', 'mm']):
+                        recommendations.append("• Add dimensions for specific searches")
+                        suggested_title += " - 6 Seater"
+                    
+                    # Check for descriptive keywords
+                    if word_count < 5:
+                        recommendations.append("• Add more descriptive keywords")
+                        suggested_title = suggested_title.replace(' - Premium Furniture', ' - Handcrafted Premium Furniture')
+                    
+                    # Check for brand positioning
+                    if 'premium' not in title.lower() and 'quality' not in title.lower():
+                        recommendations.append("• Add quality indicators")
+                        if ' - ' not in suggested_title:
+                            suggested_title += " - High Quality"
+                    
+                    # Display recommendations
+                    for rec in recommendations:
+                        st.write(rec)
+                    
+                    # Show the optimization
+                    st.write("**Optimization Applied:**")
+                    st.write(f"**Original:** {title}")
+                    st.write(f"**Optimized:** {suggested_title}")
+                    
+                    # Track the optimization
+                    optimization = {
+                        'product_id': i + 1,
+                        'original_title': title,
+                        'optimized_title': suggested_title,
+                        'changes_made': len(recommendations),
+                        'length_improvement': len(suggested_title) - len(title),
+                        'word_improvement': len(suggested_title.split()) - len(title.split())
+                    }
+                    optimizations_made.append(optimization)
+            
+            # Show optimization summary
+            if optimizations_made:
+                st.subheader("📊 Optimization Summary")
+                total_changes = sum(opt['changes_made'] for opt in optimizations_made)
+                avg_length_increase = sum(opt['length_improvement'] for opt in optimizations_made) / len(optimizations_made)
+                avg_word_increase = sum(opt['word_improvement'] for opt in optimizations_made) / len(optimizations_made)
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Products Optimized", len(optimizations_made))
+                with col2:
+                    st.metric("Total Changes Made", total_changes)
+                with col3:
+                    st.metric("Avg Length Increase", f"{avg_length_increase:.0f} chars")
+                with col4:
+                    st.metric("Avg Word Increase", f"{avg_word_increase:.0f} words")
+                
+                # Show detailed optimization table
+                st.subheader("📋 Detailed Optimization Report")
+                opt_df = pd.DataFrame(optimizations_made)
+                st.dataframe(opt_df)
+                
+                # Export optimized titles
+                st.subheader("📤 Export Optimized Titles")
+                optimized_titles = [opt['optimized_title'] for opt in optimizations_made]
+                titles_csv = pd.DataFrame({
+                    'original_title': [opt['original_title'] for opt in optimizations_made],
+                    'optimized_title': optimized_titles,
+                    'changes_made': [opt['changes_made'] for opt in optimizations_made]
+                }).to_csv(index=False)
+                
+                st.download_button(
+                    label="Download Optimized Titles CSV",
+                    data=titles_csv,
+                    file_name="optimized_titles.csv",
+                    mime="text/csv"
+                )
         
         # Description optimization
         if 'description' in df_gmc.columns:
