@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Oak Furniture Land GMC Feed Optimizer",
     page_icon="🛒",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
     menu_items={
         'Get Help': None,
         'Report a bug': None,
@@ -31,9 +31,20 @@ st.markdown("""
         display: none;
     }
     
-    /* Hide Streamlit branding in sidebar */
+    /* Hide Streamlit branding in sidebar but keep sidebar */
     .stSidebar > div:first-child {
         display: none;
+    }
+    
+    /* Ensure sidebar is visible and functional */
+    .stSidebar {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Make sure sidebar content is visible */
+    .stSidebar .stSelectbox {
+        display: block !important;
     }
     
     /* Hide Streamlit menu */
