@@ -77,6 +77,17 @@ st.markdown("""
         font-size: 1.5rem;
         font-weight: bold;
     }
+    
+    /* Ensure main content is visible */
+    .main .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+    
+    /* Make sure content is not hidden */
+    .stApp > div:last-child {
+        display: block !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
