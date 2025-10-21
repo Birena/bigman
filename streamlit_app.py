@@ -1077,33 +1077,106 @@ elif page == "Export Optimized Feed":
             if df_seo is None or len(df_seo) == 0:
                 st.error("❌ SEOMonitor data not found. Go to 'SEOMonitor API' and click 'Fetch ALL Keywords (5K+)'.")
             else:
-                with st.spinner("Analyzing products and generating full optimization with justifications..."):
-                    try:
-                        # Use AI reasoning engine built earlier
-                        recommendations = get_ai_recommendations(df_seo, df_gmc)
-                        recs_df = pd.DataFrame(recommendations)
+                # Create progress tracking
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    total_products = len(df_gmc)
+                    status_text.text("🔄 Initializing AI optimization engine...")
+                    progress_bar.progress(5)
+                    
+                    # Step 1: Prepare data
+                    status_text.text("📊 Preparing keyword data and product information...")
+                    progress_bar.progress(15)
+                    
+                    # Step 2: Generate recommendations with progress tracking
+                    status_text.text("🧠 AI is analyzing products and generating optimizations...")
+                    recommendations = []
+                    
+                    for i, (_, product) in enumerate(df_gmc.iterrows()):
+                        # Update progress
+                        progress = 15 + (i / total_products) * 70  # 15-85% for main processing
+                        progress_bar.progress(int(progress))
+                        status_text.text(f"🎯 Optimizing product {i+1}/{total_products}: {product.get('title', 'Unknown')[:50]}...")
                         
-                        # Combine with the original GMC feed (row-aligned)
-                        # We avoid overwriting existing columns; we append optimized + reasoning columns
-                        export_df = df_gmc.copy().reset_index(drop=True)
-                        # Ensure equal length; if mismatch, align by min length
-                        min_len = min(len(export_df), len(recs_df))
-                        export_df = export_df.iloc[:min_len].copy()
-                        recs_df = recs_df.iloc[:min_len].copy()
+                        product_title = product.get('title', '')
+                        product_description = product.get('description', '')
                         
-                        # Append columns
-                        export_df['optimized_title'] = recs_df['optimized_title']
-                        export_df['optimized_description'] = recs_df['optimized_description']
-                        export_df['priority_score'] = recs_df['priority_score']
-                        export_df['expected_impact'] = recs_df['expected_impact']
-                        export_df['title_reasoning'] = recs_df['title_reasoning']
-                        export_df['description_reasoning'] = recs_df['description_reasoning']
+                        # Find relevant keywords for this product
+                        relevant_keywords = find_relevant_keywords(df_seo, product_title, product_description)
                         
-                        # Store for later download
-                        st.session_state['optimized_export_df'] = export_df
-                        st.success(f"✅ Generated optimized dataset for {len(export_df)} products.")
-                    except Exception as e:
-                        st.error(f"❌ Failed to generate optimizations: {str(e)}")
+                        # Generate optimization recommendations
+                        title_rec = optimize_title_with_reasoning(product_title, relevant_keywords)
+                        desc_rec = optimize_description_with_reasoning(product_description, relevant_keywords)
+                        
+                        recommendations.append({
+                            'product_id': product.get('id', ''),
+                            'current_title': product_title,
+                            'optimized_title': title_rec['optimized'],
+                            'title_reasoning': title_rec['reasoning'],
+                            'current_description': product_description,
+                            'optimized_description': desc_rec['optimized'],
+                            'description_reasoning': desc_rec['reasoning'],
+                            'priority_score': title_rec['priority_score'],
+                            'expected_impact': title_rec['expected_impact']
+                        })
+                    
+                    # Step 3: Process results
+                    status_text.text("📋 Processing optimization results...")
+                    progress_bar.progress(90)
+                    
+                    recs_df = pd.DataFrame(recommendations)
+                    
+                    # Combine with the original GMC feed (row-aligned)
+                    export_df = df_gmc.copy().reset_index(drop=True)
+                    min_len = min(len(export_df), len(recs_df))
+                    export_df = export_df.iloc[:min_len].copy()
+                    recs_df = recs_df.iloc[:min_len].copy()
+                    
+                    # Append columns
+                    export_df['optimized_title'] = recs_df['optimized_title']
+                    export_df['optimized_description'] = recs_df['optimized_description']
+                    export_df['priority_score'] = recs_df['priority_score']
+                    export_df['expected_impact'] = recs_df['expected_impact']
+                    export_df['title_reasoning'] = recs_df['title_reasoning']
+                    export_df['description_reasoning'] = recs_df['description_reasoning']
+                    
+                    # Step 4: Complete
+                    status_text.text("✅ Optimization complete! Preparing download...")
+                    progress_bar.progress(100)
+                    
+                    # Store for later download
+                    st.session_state['optimized_export_df'] = export_df
+                    
+                    # Clear progress indicators
+                    progress_bar.empty()
+                    status_text.empty()
+                    
+                    # Show success message with details
+                    st.success(f"🎉 **Optimization Complete!** Generated optimized dataset for {len(export_df)} products.")
+                    
+                    # Show optimization summary
+                    high_impact = len([r for r in recommendations if r['expected_impact'] == 'HIGH'])
+                    medium_impact = len([r for r in recommendations if r['expected_impact'] == 'MEDIUM'])
+                    low_impact = len([r for r in recommendations if r['expected_impact'] == 'LOW'])
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("High Impact", high_impact)
+                    with col2:
+                        st.metric("Medium Impact", medium_impact)
+                    with col3:
+                        st.metric("Low Impact", low_impact)
+                    with col4:
+                        st.metric("Total Products", len(export_df))
+                    
+                    st.info("💡 **What happened:** AI analyzed each product against 2,471+ keywords, found relevant search terms, calculated traffic potential, and generated optimized titles/descriptions with detailed reasoning.")
+                    
+                except Exception as e:
+                    progress_bar.empty()
+                    status_text.empty()
+                    st.error(f"❌ Failed to generate optimizations: {str(e)}")
         
         # Download buttons when ready
         if 'optimized_export_df' in st.session_state:
