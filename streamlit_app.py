@@ -191,6 +191,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.selectbox("Choose a section", [
     "GMC Feed Upload", 
+    "Sitebulb Upload",
     "SEOMonitor API", 
     "Strategic Optimization",
     "Export Optimized Feed"
@@ -227,13 +228,44 @@ if page == "GMC Feed Upload":
         except Exception as e:
             st.error(f"❌ Error reading file: {str(e)}")
 
+elif page == "Sitebulb Upload":
+    st.header("📁 Upload Sitebulb Crawl Data")
+    
+    # Show current data status
+    if st.session_state['sitebulb_data'] is not None:
+        st.success(f"✅ Sitebulb Data Already Loaded: {st.session_state.get('sitebulb_file', 'Unknown file')} ({len(st.session_state['sitebulb_data'])} records)")
+        st.dataframe(st.session_state['sitebulb_data'].head(10))
+        st.info("💡 **Data Persistence**: Your Sitebulb crawl data is saved and will persist across all tabs.")
+    
+    # File upload
+    uploaded_file = st.file_uploader(
+        "Upload your Sitebulb crawl report (CSV, Excel)",
+        type=['csv', 'xlsx', 'xls'],
+        help="Upload your Sitebulb crawl export file"
+    )
+    
+    if uploaded_file is not None:
+        try:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            st.success(f"✅ Sitebulb data uploaded! {len(df)} records loaded.")
+            st.session_state['sitebulb_data'] = df
+            st.session_state['sitebulb_file'] = uploaded_file.name
+            st.dataframe(df.head(10))
+                
+        except Exception as e:
+            st.error(f"❌ Error reading file: {str(e)}")
+
 elif page == "SEOMonitor API":
     st.header("📈 SEOMonitor API Integration")
     
     # Try to load config
     try:
         config = configparser.ConfigParser()
-        config.read('config_oak_furniture.ini')
+        config.read('config_oak_furnitor.ini')
         api_key = config['SEOMonitor']['api_key']
         campaign_id = config['SEOMonitor']['campaign_id']
         brand_name = config['Brand']['name']
@@ -241,9 +273,9 @@ elif page == "SEOMonitor API":
         st.success(f"✅ API configured for {brand_name}")
         st.info(f"Campaign ID: {campaign_id}")
         
-        if st.button("🔍 Fetch ALL Keywords"):
-            with st.spinner("🔄 Fetching keyword data..."):
-                # Simplified API call
+        if st.button("🔍 Fetch ALL Keywords (Paginated)"):
+            with st.spinner("🔄 Fetching ALL keyword data with pagination..."):
+                # Enhanced API call with pagination
                 headers = {
                     'Authorization': api_key,
                     'X-Token': api_key,
@@ -253,29 +285,50 @@ elif page == "SEOMonitor API":
                 end_date = datetime.now()
                 start_date = end_date - timedelta(days=90)
                 
-                params = {
-                    'campaign_id': campaign_id,
-                    'start_date': start_date.strftime('%Y-%m-%d'),
-                    'end_date': end_date.strftime('%Y-%m-%d'),
-                    'include_all_groups': 'true',
-                    'limit': 200,
-                    'offset': 0
-                }
+                all_keywords = []
+                offset = 0
+                limit = 200
                 
-                url = f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/keywords"
-                response = requests.get(url, headers=headers, params=params)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    if isinstance(data, list) and len(data) > 0:
-                        df_seo = pd.DataFrame(data)
-                        st.session_state['seomonitor_data'] = df_seo
-                        st.success(f"✅ Fetched {len(df_seo)} keywords!")
-                        st.metric("Total Keywords", len(df_seo))
+                while True:
+                    params = {
+                        'campaign_id': campaign_id,
+                        'start_date': start_date.strftime('%Y-%m-%d'),
+                        'end_date': end_date.strftime('%Y-%m-%d'),
+                        'include_all_groups': 'true',
+                        'limit': limit,
+                        'offset': offset
+                    }
+                    
+                    url = f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/keywords"
+                    response = requests.get(url, headers=headers, params=params)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if isinstance(data, list) and len(data) > 0:
+                            all_keywords.extend(data)
+                            offset += len(data)
+                            st.write(f"📊 Fetched {len(data)} keywords (Total: {len(all_keywords)})")
+                            
+                            # Safety cap to avoid infinite loops
+                            if len(data) < limit or len(all_keywords) >= 10000:
+                                break
+                        else:
+                            break
                     else:
-                        st.error("❌ No data returned from API")
+                        st.error(f"❌ API Error: {response.status_code}")
+                        break
+                
+                if all_keywords:
+                    df_seo = pd.DataFrame(all_keywords)
+                    st.session_state['seomonitor_data'] = df_seo
+                    st.success(f"✅ Fetched {len(df_seo)} keywords total!")
+                    st.metric("Total Keywords", len(df_seo))
+                    
+                    # Show sample data
+                    st.subheader("📊 Sample Keyword Data")
+                    st.dataframe(df_seo.head(10))
                 else:
-                    st.error(f"❌ API Error: {response.status_code}")
+                    st.error("❌ No keywords found")
         
     except Exception as e:
         st.error(f"❌ Config file not found: {str(e)}")
