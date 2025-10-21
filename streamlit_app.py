@@ -263,10 +263,51 @@ def process_comprehensive_data(all_data, campaign_id):
     
     st.info(f"🔍 Found fields - Volume: {volume_field}, Position: {position_field}, Difficulty: {difficulty_field}")
     
-    # Map the fields
-    processed_df['search_volume'] = processed_df[volume_field] if volume_field else 0
-    processed_df['position'] = processed_df[position_field] if position_field else 0
-    processed_df['difficulty'] = processed_df[difficulty_field] if difficulty_field else 0
+    # Map the fields - handle nested data structures
+    def extract_search_volume(row):
+        """Extract search volume from nested search_data"""
+        try:
+            search_data = row.get('search_data', {})
+            search_volume = search_data.get('search_volume', [])
+            if search_volume and len(search_volume) > 0:
+                # Get the most recent month's volume
+                return search_volume[-1].get('search_volume', 0)
+            return 0
+        except:
+            return 0
+    
+    def extract_position(row):
+        """Extract position from nested ranking_data"""
+        try:
+            ranking_data = row.get('ranking_data', {})
+            desktop_rank = ranking_data.get('desktop', {}).get('rank', 0)
+            mobile_rank = ranking_data.get('mobile', {}).get('rank', 0)
+            # Use desktop rank as primary, fallback to mobile
+            return desktop_rank if desktop_rank > 0 else mobile_rank
+        except:
+            return 0
+    
+    def extract_difficulty(row):
+        """Extract difficulty from nested traffic_data"""
+        try:
+            traffic_data = row.get('traffic_data', {})
+            opportunity = traffic_data.get('opportunity', {})
+            difficulty_str = opportunity.get('difficulty', '')
+            # Convert difficulty string to numeric
+            if 'top_30' in difficulty_str.lower():
+                return 30
+            elif 'top_10' in difficulty_str.lower():
+                return 10
+            elif 'top_5' in difficulty_str.lower():
+                return 5
+            return 0
+        except:
+            return 0
+    
+    # Apply the extraction functions
+    processed_df['search_volume'] = processed_df.apply(extract_search_volume, axis=1)
+    processed_df['position'] = processed_df.apply(extract_position, axis=1)
+    processed_df['difficulty'] = processed_df.apply(extract_difficulty, axis=1)
     processed_df['ranking_type'] = processed_df.get('type', processed_df.get('ranking_type', 'traditional'))
     
     # Calculate intelligence metrics
