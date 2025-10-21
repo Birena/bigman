@@ -1,4 +1,5 @@
-st.caption("Version 1.3 - SYNTAX FIX")s pd
+import streamlit as st
+import pandas as pd
 import numpy as np
 import requests
 import json
@@ -110,7 +111,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 1.3 - SYNTAX FIX")
+st.caption("Version 1.4 - CLEAN DEPLOY")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
