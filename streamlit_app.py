@@ -114,6 +114,46 @@ st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
 st.caption("Version 1.1")
 
+# Data Status Header - Shows what's loaded and analysis readiness
+st.markdown("### 📊 Data Status & Analysis Readiness")
+
+# Create columns for status display
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    if st.session_state['gmc_feed'] is not None:
+        st.success(f"✅ **GMC Feed**\n{len(st.session_state['gmc_feed'])} products\n{st.session_state.get('gmc_file', 'Unknown file')}")
+    else:
+        st.error("❌ **GMC Feed**\nNot loaded")
+
+with col2:
+    if st.session_state['seomonitor_data'] is not None:
+        st.success(f"✅ **SEOMonitor**\n{len(st.session_state['seomonitor_data'])} keywords\nIntelligence data ready")
+    else:
+        st.error("❌ **SEOMonitor**\nNot loaded")
+
+with col3:
+    if st.session_state['sitebulb_data'] is not None:
+        st.success(f"✅ **Sitebulb**\n{len(st.session_state['sitebulb_data'])} pages\nCrawl data ready")
+    else:
+        st.warning("⚠️ **Sitebulb**\nOptional")
+
+with col4:
+    # Analysis readiness check
+    gmc_ready = st.session_state['gmc_feed'] is not None
+    seo_ready = st.session_state['seomonitor_data'] is not None
+    
+    if gmc_ready and seo_ready:
+        st.success("🚀 **Ready for Analysis**\nAll core data loaded\nProceed to optimization!")
+    elif gmc_ready:
+        st.warning("⚠️ **Partial Ready**\nGMC loaded, need SEO data")
+    elif seo_ready:
+        st.warning("⚠️ **Partial Ready**\nSEO loaded, need GMC data")
+    else:
+        st.error("❌ **Not Ready**\nNeed GMC + SEO data")
+
+st.markdown("---")
+
 # Load configuration
 @st.cache_data
 def load_config():
@@ -537,7 +577,7 @@ def enhance_description_with_keywords(description, keywords):
             enhanced += f" {keyword.title()}"
     return enhanced
 
-# Initialize session state
+# Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
     st.session_state['sitebulb_data'] = None
 if 'seomonitor_data' not in st.session_state:
@@ -546,9 +586,33 @@ if 'product_data' not in st.session_state:
     st.session_state['product_data'] = None
 if 'gmc_feed' not in st.session_state:
     st.session_state['gmc_feed'] = None
+if 'gmc_file' not in st.session_state:
+    st.session_state['gmc_file'] = None
+if 'sitebulb_file' not in st.session_state:
+    st.session_state['sitebulb_file'] = None
 
 # Sidebar for navigation
 st.sidebar.title("Navigation")
+
+# Data Status Indicator
+st.sidebar.markdown("### 📊 Data Status")
+if st.session_state['gmc_feed'] is not None:
+    st.sidebar.success(f"✅ GMC: {len(st.session_state['gmc_feed'])} products")
+else:
+    st.sidebar.warning("⚠️ No GMC data")
+
+if st.session_state['seomonitor_data'] is not None:
+    st.sidebar.success(f"✅ SEO: {len(st.session_state['seomonitor_data'])} keywords")
+else:
+    st.sidebar.warning("⚠️ No SEO data")
+
+if st.session_state['sitebulb_data'] is not None:
+    st.sidebar.success(f"✅ Sitebulb: {len(st.session_state['sitebulb_data'])} pages")
+else:
+    st.sidebar.warning("⚠️ No Sitebulb data")
+
+st.sidebar.markdown("---")
+
 page = st.sidebar.selectbox("Choose a section", [
     "GMC Feed Strategy", 
     "GMC Feed Upload", 
@@ -593,6 +657,44 @@ if page == "GMC Feed Strategy":
 
 elif page == "GMC Feed Upload":
     st.header("🛒 Upload GMC Feed Data")
+    
+    # Show current data status
+    if st.session_state['gmc_feed'] is not None:
+        st.success(f"✅ GMC Feed Already Loaded: {st.session_state.get('gmc_file', 'Unknown file')} ({len(st.session_state['gmc_feed'])} products)")
+        
+        # Show data preview
+        st.subheader("📊 Current GMC Feed Preview")
+        st.dataframe(st.session_state['gmc_feed'].head(10))
+        
+        # Show data info
+        st.subheader("📈 Feed Analysis")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Products", len(st.session_state['gmc_feed']))
+        with col2:
+            st.metric("Columns", len(st.session_state['gmc_feed'].columns))
+        with col3:
+            st.metric("Missing Values", st.session_state['gmc_feed'].isnull().sum().sum())
+        
+        # GMC-specific analysis
+        st.subheader("🛒 GMC Feed Quality Analysis")
+        gmc_fields = ['id', 'title', 'description', 'price', 'availability', 'condition', 'brand', 'gtin', 'mpn', 'image_link']
+        found_fields = [field for field in gmc_fields if field in st.session_state['gmc_feed'].columns]
+        missing_fields = [field for field in gmc_fields if field not in st.session_state['gmc_feed'].columns]
+        
+        if found_fields:
+            st.success(f"✅ Found GMC fields: {', '.join(found_fields)}")
+        if missing_fields:
+            st.warning(f"⚠️ Missing GMC fields: {', '.join(missing_fields)}")
+        
+        # Product category analysis
+        if 'product_type' in st.session_state['gmc_feed'].columns:
+            st.subheader("📂 Product Categories")
+            category_counts = st.session_state['gmc_feed']['product_type'].value_counts().head(10)
+            st.bar_chart(category_counts)
+        
+        st.markdown("---")
+        st.info("💡 **Data Persistence**: Your GMC feed data is saved and will persist across all tabs. You can now proceed to other sections like 'Strategic Optimization' or 'Export Optimized Feed'.")
     
     # File upload
     uploaded_file = st.file_uploader(
@@ -654,6 +756,27 @@ elif page == "GMC Feed Upload":
 
 elif page == "Sitebulb Upload":
     st.header("📁 Upload Sitebulb Crawl Data")
+    
+    # Show current data status
+    if st.session_state['sitebulb_data'] is not None:
+        st.success(f"✅ Sitebulb Data Already Loaded: {st.session_state.get('sitebulb_file', 'Unknown file')} ({len(st.session_state['sitebulb_data'])} records)")
+        
+        # Show data preview
+        st.subheader("📊 Current Sitebulb Data Preview")
+        st.dataframe(st.session_state['sitebulb_data'].head(10))
+        
+        # Show data info
+        st.subheader("📈 Crawl Analysis")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Pages", len(st.session_state['sitebulb_data']))
+        with col2:
+            st.metric("Columns", len(st.session_state['sitebulb_data'].columns))
+        with col3:
+            st.metric("Missing Values", st.session_state['sitebulb_data'].isnull().sum().sum())
+        
+        st.markdown("---")
+        st.info("💡 **Data Persistence**: Your Sitebulb crawl data is saved and will persist across all tabs. You can now proceed to other sections like 'Strategic Optimization'.")
     
     # File upload
     uploaded_file = st.file_uploader(
