@@ -186,6 +186,22 @@ def fetch_comprehensive_seomonitor_data():
                     df_endpoint = pd.DataFrame(collected_rows)
                     all_data[endpoint_name] = df_endpoint
                     st.success(f"✅ {endpoint_name}: {len(df_endpoint)} records (all pages)")
+                    
+                    # Debug: Show available columns for keywords
+                    if endpoint_name == 'keywords' and len(df_endpoint) > 0:
+                        st.info(f"🔍 Available columns: {list(df_endpoint.columns)}")
+                        if len(df_endpoint) > 0:
+                            st.info(f"🔍 Sample data: {df_endpoint.iloc[0].to_dict()}")
+                            
+                            # Show specific field values
+                            sample_row = df_endpoint.iloc[0]
+                            st.info(f"🔍 Field values - Volume: {sample_row.get('volume', 'NOT_FOUND')}, Position: {sample_row.get('position', 'NOT_FOUND')}, Difficulty: {sample_row.get('difficulty', 'NOT_FOUND')}")
+                            
+                            # Show all field names that might contain volume/position data
+                            volume_fields = [col for col in df_endpoint.columns if 'volume' in col.lower() or 'search' in col.lower()]
+                            position_fields = [col for col in df_endpoint.columns if 'position' in col.lower() or 'rank' in col.lower()]
+                            st.info(f"🔍 Volume-related fields: {volume_fields}")
+                            st.info(f"🔍 Position-related fields: {position_fields}")
                 else:
                     all_data[endpoint_name] = pd.DataFrame()
                     st.warning(f"⚠️ No {endpoint_name} data found")
@@ -219,11 +235,39 @@ def process_comprehensive_data(all_data, campaign_id):
     # Enhanced data processing
     processed_df = combined_df.copy()
     
-    # Add intelligence fields
-    processed_df['search_volume'] = processed_df.get('volume', 0)
-    processed_df['difficulty'] = processed_df.get('difficulty', 0)
-    processed_df['position'] = processed_df.get('position', 0)
-    processed_df['ranking_type'] = processed_df.get('type', 'traditional')  # traditional vs shopping
+    # Add intelligence fields - try multiple possible field names
+    # First, let's see what fields we actually have
+    available_cols = list(processed_df.columns)
+    st.info(f"🔍 Processing fields: {available_cols}")
+    
+    # Try to find volume field
+    volume_field = None
+    for field in ['volume', 'search_volume', 'monthly_searches', 'search_vol', 'vol']:
+        if field in available_cols:
+            volume_field = field
+            break
+    
+    # Try to find position field  
+    position_field = None
+    for field in ['position', 'rank', 'current_rank', 'ranking', 'pos']:
+        if field in available_cols:
+            position_field = field
+            break
+            
+    # Try to find difficulty field
+    difficulty_field = None
+    for field in ['difficulty', 'keyword_difficulty', 'competition', 'comp', 'diff']:
+        if field in available_cols:
+            difficulty_field = field
+            break
+    
+    st.info(f"🔍 Found fields - Volume: {volume_field}, Position: {position_field}, Difficulty: {difficulty_field}")
+    
+    # Map the fields
+    processed_df['search_volume'] = processed_df[volume_field] if volume_field else 0
+    processed_df['position'] = processed_df[position_field] if position_field else 0
+    processed_df['difficulty'] = processed_df[difficulty_field] if difficulty_field else 0
+    processed_df['ranking_type'] = processed_df.get('type', processed_df.get('ranking_type', 'traditional'))
     
     # Calculate intelligence metrics
     processed_df['traffic_potential'] = processed_df['search_volume'] * (1 / (processed_df['position'] + 1))
@@ -323,12 +367,16 @@ def get_ai_recommendations(keyword_data, product_data):
 def find_relevant_keywords(keyword_data, title, description):
     """Find keywords most relevant to this product"""
     # Simple keyword matching - could be enhanced with NLP
+    # Handle NaN values in title/description
+    title = str(title) if pd.notna(title) else ""
+    description = str(description) if pd.notna(description) else ""
     product_text = f"{title} {description}".lower()
     
     relevant = []
     for _, keyword_row in keyword_data.iterrows():
-        keyword = keyword_row['keyword'].lower()
-        if any(word in product_text for word in keyword.split()):
+        # Handle NaN values in keyword
+        keyword = str(keyword_row['keyword']) if pd.notna(keyword_row['keyword']) else ""
+        if keyword and any(word in product_text for word in keyword.lower().split()):
             relevant.append(keyword_row)
     
     return pd.DataFrame(relevant)
@@ -415,6 +463,13 @@ def optimize_description_with_reasoning(current_description, relevant_keywords):
 
 def integrate_keyword_intelligently(title, keyword):
     """Intelligently integrate keyword into title"""
+    # Handle NaN values
+    title = str(title) if pd.notna(title) else ""
+    keyword = str(keyword) if pd.notna(keyword) else ""
+    
+    if not title or not keyword:
+        return title
+    
     # Simple integration - could be enhanced with NLP
     if keyword.lower() not in title.lower():
         # Add keyword naturally
@@ -427,9 +482,13 @@ def integrate_keyword_intelligently(title, keyword):
 
 def enhance_description_with_keywords(description, keywords):
     """Enhance description with relevant keywords"""
+    # Handle NaN values
+    description = str(description) if pd.notna(description) else ""
     enhanced = description
+    
     for keyword in keywords:
-        if keyword.lower() not in description.lower():
+        keyword = str(keyword) if pd.notna(keyword) else ""
+        if keyword and keyword.lower() not in description.lower():
             enhanced += f" {keyword.title()}"
     return enhanced
 
