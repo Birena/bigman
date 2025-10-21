@@ -265,7 +265,7 @@ elif page == "SEOMonitor API":
     # Try to load config
     try:
         config = configparser.ConfigParser()
-        config.read('config_oak_furnitor.ini')
+        config.read('config_oak_furniture.ini')
         api_key = config['SEOMonitor']['api_key']
         campaign_id = config['SEOMonitor']['campaign_id']
         brand_name = config['Brand']['name']
