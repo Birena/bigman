@@ -1,121 +1,79 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import requests
-import json
-import configparser
-import os
-from datetime import datetime, timedelta
-
-st.set_page_config(
-    page_title="Oak Furniture Land GMC Feed Optimizer",
-    page_icon="🛒",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': None,
-        'Report a bug': None,
-        'About': None
-    }
-)
-
-# Minimal CSS - only hide branding, keep sidebar
-st.markdown("""
-<style>
-    /* Hide Streamlit header */
-    .stApp > header {
-        display: none;
-    }
+elif page == "Export Optimized Feed":
+    st.header("📤 Export Optimized GMC Feed")
     
-    /* Hide Streamlit footer */
-    .stApp > footer {
-        display: none;
-    }
-    
-    /* Hide Streamlit watermark */
-    .stApp::before {
-        display: none;
-    }
-    
-    /* Login form styling */
-    .login-container {
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 2rem;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .login-title {
-        text-align: center;
-        margin-bottom: 2rem;
-        font-size: 1.5rem;
-        font-weight: bold;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Authentication system
-def check_credentials(username, password):
-    """Check if credentials are valid"""
-    valid_users = {
-        "oakfurniture": "OFL2024!",
-        "admin": "Admin123!",
-        "seo": "SEO2024!"
-    }
-    return valid_users.get(username) == password
-
-# Initialize session state for authentication
-if 'authenticated' not in st.session_state:
-    st.session_state['authenticated'] = False
-
-# Show login form if not authenticated
-if not st.session_state['authenticated']:
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    
-    st.markdown('<div class="login-title">🔐 Oak Furniture Land</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-title">GMC Feed Optimizer</div>', unsafe_allow_html=True)
-    
-    with st.form("login_form"):
-        st.markdown("**Please enter your credentials to access the system:**")
+    if st.session_state['gmc_feed'] is None:
+        st.warning("⚠️ Please upload GMC feed data first.")
+    else:
+        df_gmc = st.session_state['gmc_feed']
+        recommendations = st.session_state.get('optimization_recommendations', [])
         
-        username = st.text_input("Username", placeholder="Enter username")
-        password = st.text_input("Password", type="password", placeholder="Enter password")
+        st.subheader("📊 Export Options")
         
-        submitted = st.form_submit_button("Login", type="primary")
+        # Export original feed
+        csv_original = df_gmc.to_csv(index=False)
+        st.download_button(
+            label="Download Original CSV",
+            data=csv_original,
+            file_name=f"original_{st.session_state.get('gmc_file', 'gmc_feed')}.csv",
+            mime="text/csv"
+        )
         
-        if submitted:
-            if check_credentials(username, password):
-                st.session_state['authenticated'] = True
-                st.session_state['username'] = username
-                st.success("✅ Login successful!")
-                st.rerun()
-            else:
-                st.error("❌ Invalid username or password")
-    
-    st.markdown("---")
-    st.markdown("**Contact your administrator for access credentials.**")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.stop()
-
-# Show logout button
-if st.session_state['authenticated']:
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col3:
-        if st.button("🚪 Logout"):
-            st.session_state['authenticated'] = False
-            st.session_state.pop('username', None)
-            st.rerun()
-
-st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
-st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 1.1")
-
-# Initialize session state with persistence
-if 'sitebulb_data' not in st.session_state:
-    st.session_state['sitebulb_data'] = None
+        # Export optimized feed
+        if recommendations:
+            st.markdown("---")
+            st.subheader("🚀 Optimized Feed Export")
+            
+            # Create optimized DataFrame
+            optimized_data = []
+            for rec in recommendations:
+                # Find original product data
+                original_product = df_gmc[df_gmc['id'] == rec['product_id']].iloc[0] if 'id' in df_gmc.columns else df_gmc.iloc[int(rec['product_id'].split('_')[1]) if '_' in rec['product_id'] else 0]
+                
+                # Create optimized product row
+                optimized_row = original_product.to_dict()
+                optimized_row['title'] = rec['optimized_title']
+                optimized_row['description'] = rec['optimized_description']
+                optimized_row['optimization_priority'] = rec['priority_score']
+                optimized_row['expected_impact'] = rec['expected_impact']
+                optimized_row['title_reasoning'] = rec['title_reasoning']
+                optimized_row['description_reasoning'] = rec['description_reasoning']
+                
+                optimized_data.append(optimized_row)
+            
+            df_optimized = pd.DataFrame(optimized_data)
+            
+            # Export optimized CSV
+            csv_optimized = df_optimized.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Download Optimized CSV (with reasons)",
+                data=csv_optimized,
+                file_name=f"optimized_{st.session_state.get('gmc_file', 'gmc_feed')}.csv",
+                mime="text/csv"
+            )
+            
+            # Export optimized Excel
+            import io
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_optimized.to_excel(writer, sheet_name='Optimized Feed', index=False)
+            
+            st.download_button(
+                label="⬇️ Download Optimized XLSX (with reasons)",
+                data=output.getvalue(),
+                file_name=f"optimized_{st.session_state.get('gmc_file', 'gmc_feed')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+            # Show summary
+            st.success(f"✅ Ready to export {len(optimized_data)} optimized products!")
+            
+            # Show sample of optimizations
+            st.subheader("📋 Sample Optimizations")
+            sample_df = df_optimized[['title', 'optimized_title', 'expected_impact', 'title_reasoning']].head(5)
+            st.dataframe(sample_df)
+            
+        else:
+            st.warning("⚠️ No optimizations found. Please run 'Strategic Optimization' first.")ata'] = None
 if 'seomonitor_data' not in st.session_state:
     st.session_state['seomonitor_data'] = None
 if 'product_data' not in st.session_state:
@@ -354,8 +312,102 @@ elif page == "Strategic Optimization":
         
         if st.button("🚀 Generate AI-Powered Optimizations", type="primary"):
             if df_seo is not None:
-                st.success("✅ Optimization would be generated here!")
-                st.info("This is a simplified version. Full optimization logic will be restored.")
+                with st.spinner("🧠 AI is analyzing and optimizing all products..."):
+                    # Initialize progress bar
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    # Get optimization recommendations
+                    recommendations = []
+                    total_products = len(df_gmc)
+                    
+                    for i, (_, product) in enumerate(df_gmc.iterrows()):
+                        # Update progress
+                        progress = (i + 1) / total_products
+                        progress_bar.progress(progress)
+                        status_text.text(f"🎯 Optimizing product {i+1}/{total_products}: {product.get('title', 'Unknown')[:50]}...")
+                        
+                        # Find relevant keywords for this product
+                        product_title = str(product.get('title', ''))
+                        product_desc = str(product.get('description', ''))
+                        product_text = f"{product_title} {product_desc}".lower()
+                        
+                        # Find matching keywords
+                        relevant_keywords = []
+                        for _, keyword_row in df_seo.iterrows():
+                            keyword = str(keyword_row.get('keyword', ''))
+                            if keyword and any(word in product_text for word in keyword.lower().split()):
+                                relevant_keywords.append(keyword_row)
+                        
+                        if relevant_keywords:
+                            # Get best keyword
+                            best_keyword = max(relevant_keywords, key=lambda x: x.get('search_volume', 0))
+                            
+                            # Optimize title
+                            optimized_title = product_title
+                            if best_keyword['keyword'].lower() not in product_title.lower():
+                                optimized_title = f"{product_title} | {best_keyword['keyword'].title()}"
+                            
+                            # Optimize description
+                            optimized_desc = product_desc
+                            if len(relevant_keywords) > 1:
+                                secondary_keyword = relevant_keywords[1]['keyword']
+                                if secondary_keyword.lower() not in product_desc.lower():
+                                    optimized_desc = f"{product_desc} {secondary_keyword.title()}"
+                            
+                            # Calculate priority score
+                            search_volume = best_keyword.get('search_volume', 0)
+                            priority_score = min(100, search_volume / 10)  # Scale to 0-100
+                            
+                            recommendations.append({
+                                'product_id': product.get('id', f'product_{i}'),
+                                'current_title': product_title,
+                                'optimized_title': optimized_title,
+                                'current_description': product_desc,
+                                'optimized_description': optimized_desc,
+                                'priority_score': priority_score,
+                                'expected_impact': 'HIGH' if priority_score > 50 else 'MEDIUM' if priority_score > 20 else 'LOW',
+                                'title_reasoning': f"Added high-volume keyword '{best_keyword['keyword']}' ({search_volume:,} monthly searches) to improve Google Shopping visibility",
+                                'description_reasoning': f"Enhanced with secondary keyword '{secondary_keyword}' for better search relevance" if len(relevant_keywords) > 1 else "Description optimized for search intent"
+                            })
+                        else:
+                            # No relevant keywords found
+                            recommendations.append({
+                                'product_id': product.get('id', f'product_{i}'),
+                                'current_title': product_title,
+                                'optimized_title': product_title,
+                                'current_description': product_desc,
+                                'optimized_description': product_desc,
+                                'priority_score': 0,
+                                'expected_impact': 'LOW',
+                                'title_reasoning': "No relevant keywords found in SEOMonitor data",
+                                'description_reasoning': "No optimization opportunities identified"
+                            })
+                    
+                    # Store recommendations
+                    st.session_state['optimization_recommendations'] = recommendations
+                    
+                    # Clear progress
+                    progress_bar.empty()
+                    status_text.empty()
+                    
+                    # Show results
+                    st.success(f"✅ Generated optimizations for {len(recommendations)} products!")
+                    
+                    # Show summary
+                    high_impact = len([r for r in recommendations if r['expected_impact'] == 'HIGH'])
+                    medium_impact = len([r for r in recommendations if r['expected_impact'] == 'MEDIUM'])
+                    low_impact = len([r for r in recommendations if r['expected_impact'] == 'LOW'])
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("High Impact", high_impact)
+                    with col2:
+                        st.metric("Medium Impact", medium_impact)
+                    with col3:
+                        st.metric("Low Impact", low_impact)
+                    
+                    st.info("💡 Optimizations complete! Go to 'Export Optimized Feed' to download your optimized GMC feed.")
             else:
                 st.error("❌ SEOMonitor data required for AI optimization.")
 
@@ -366,6 +418,7 @@ elif page == "Export Optimized Feed":
         st.warning("⚠️ Please upload GMC feed data first.")
     else:
         df_gmc = st.session_state['gmc_feed']
+        recommendations = st.session_state.get('optimization_recommendations', [])
         
         st.subheader("📊 Export Options")
         
@@ -378,7 +431,62 @@ elif page == "Export Optimized Feed":
             mime="text/csv"
         )
         
-        st.info("💡 Full optimization export will be restored in the next update.")
+        # Export optimized feed
+        if recommendations:
+            st.markdown("---")
+            st.subheader("🚀 Optimized Feed Export")
+            
+            # Create optimized DataFrame
+            optimized_data = []
+            for rec in recommendations:
+                # Find original product data
+                original_product = df_gmc[df_gmc['id'] == rec['product_id']].iloc[0] if 'id' in df_gmc.columns else df_gmc.iloc[int(rec['product_id'].split('_')[1]) if '_' in rec['product_id'] else 0]
+                
+                # Create optimized product row
+                optimized_row = original_product.to_dict()
+                optimized_row['title'] = rec['optimized_title']
+                optimized_row['description'] = rec['optimized_description']
+                optimized_row['optimization_priority'] = rec['priority_score']
+                optimized_row['expected_impact'] = rec['expected_impact']
+                optimized_row['title_reasoning'] = rec['title_reasoning']
+                optimized_row['description_reasoning'] = rec['description_reasoning']
+                
+                optimized_data.append(optimized_row)
+            
+            df_optimized = pd.DataFrame(optimized_data)
+            
+            # Export optimized CSV
+            csv_optimized = df_optimized.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Download Optimized CSV (with reasons)",
+                data=csv_optimized,
+                file_name=f"optimized_{st.session_state.get('gmc_file', 'gmc_feed')}.csv",
+                mime="text/csv"
+            )
+            
+            # Export optimized Excel
+            import io
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_optimized.to_excel(writer, sheet_name='Optimized Feed', index=False)
+            
+            st.download_button(
+                label="⬇️ Download Optimized XLSX (with reasons)",
+                data=output.getvalue(),
+                file_name=f"optimized_{st.session_state.get('gmc_file', 'gmc_feed')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+            # Show summary
+            st.success(f"✅ Ready to export {len(optimized_data)} optimized products!")
+            
+            # Show sample of optimizations
+            st.subheader("📋 Sample Optimizations")
+            sample_df = df_optimized[['title', 'optimized_title', 'expected_impact', 'title_reasoning']].head(5)
+            st.dataframe(sample_df)
+            
+        else:
+            st.warning("⚠️ No optimizations found. Please run 'Strategic Optimization' first.")
 
 # Footer
 st.markdown("---")
