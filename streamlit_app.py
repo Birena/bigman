@@ -235,45 +235,25 @@ def process_comprehensive_data(all_data, campaign_id):
     # Enhanced data processing
     processed_df = combined_df.copy()
     
-    # Add intelligence fields - try multiple possible field names
+    # Add intelligence fields using nested data extraction
     # First, let's see what fields we actually have
     available_cols = list(processed_df.columns)
     st.info(f"🔍 Processing fields: {available_cols}")
-    
-    # Try to find volume field
-    volume_field = None
-    for field in ['volume', 'search_volume', 'monthly_searches', 'search_vol', 'vol']:
-        if field in available_cols:
-            volume_field = field
-            break
-    
-    # Try to find position field  
-    position_field = None
-    for field in ['position', 'rank', 'current_rank', 'ranking', 'pos']:
-        if field in available_cols:
-            position_field = field
-            break
-            
-    # Try to find difficulty field
-    difficulty_field = None
-    for field in ['difficulty', 'keyword_difficulty', 'competition', 'comp', 'diff']:
-        if field in available_cols:
-            difficulty_field = field
-            break
-    
-    st.info(f"🔍 Found fields - Volume: {volume_field}, Position: {position_field}, Difficulty: {difficulty_field}")
     
     # Map the fields - handle nested data structures
     def extract_search_volume(row):
         """Extract search volume from nested search_data"""
         try:
             search_data = row.get('search_data', {})
-            search_volume = search_data.get('search_volume', [])
-            if search_volume and len(search_volume) > 0:
-                # Get the most recent month's volume
-                return search_volume[-1].get('search_volume', 0)
+            if isinstance(search_data, dict):
+                search_volume = search_data.get('search_volume', [])
+                if isinstance(search_volume, list) and len(search_volume) > 0:
+                    # Get the most recent month's volume
+                    latest_month = search_volume[-1]
+                    if isinstance(latest_month, dict):
+                        return latest_month.get('search_volume', 0)
             return 0
-        except:
+        except Exception as e:
             return 0
     
     def extract_position(row):
@@ -309,6 +289,16 @@ def process_comprehensive_data(all_data, campaign_id):
     processed_df['position'] = processed_df.apply(extract_position, axis=1)
     processed_df['difficulty'] = processed_df.apply(extract_difficulty, axis=1)
     processed_df['ranking_type'] = processed_df.get('type', processed_df.get('ranking_type', 'traditional'))
+    
+    # Debug: Show extracted values
+    st.info(f"🔍 Extracted values - Volume: {processed_df['search_volume'].sum()}, Position: {processed_df['position'].mean():.1f}, Difficulty: {processed_df['difficulty'].mean():.1f}")
+    
+    # Debug: Show sample nested data structure
+    if len(processed_df) > 0:
+        sample_row = processed_df.iloc[0]
+        st.info(f"🔍 Sample search_data: {sample_row.get('search_data', 'NOT_FOUND')}")
+        st.info(f"🔍 Sample ranking_data: {sample_row.get('ranking_data', 'NOT_FOUND')}")
+        st.info(f"🔍 Sample traffic_data: {sample_row.get('traffic_data', 'NOT_FOUND')}")
     
     # Calculate intelligence metrics
     processed_df['traffic_potential'] = processed_df['search_volume'] * (1 / (processed_df['position'] + 1))
