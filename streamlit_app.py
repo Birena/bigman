@@ -131,12 +131,9 @@ def fetch_comprehensive_seomonitor_data():
         api_key = config.get('SEOMonitor', 'api_key')
         campaign_id = config.get('SEOMonitor', 'campaign_id')
         
-        # Multiple API endpoints for comprehensive analysis
+        # Only use available endpoints - SEOMonitor API v3 only has keywords endpoint for rank tracker
         endpoints = {
-            'keywords': f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/keywords",
-            'competitors': f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/competitors",
-            'shopping_rankings': f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/shopping-rankings",  # Google Shopping specific
-            'share_of_voice': f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/share-of-voice"
+            'keywords': f"https://apigw.seomonitor.com/v3/rank-tracker/v3.0/keywords"
         }
         
         headers = {
@@ -246,10 +243,16 @@ def process_comprehensive_data(all_data, campaign_id):
         try:
             search_data = row.get('search_data', {})
             if isinstance(search_data, dict):
-                search_volume = search_data.get('search_volume', [])
-                if isinstance(search_volume, list) and len(search_volume) > 0:
+                # Try direct search_volume first
+                direct_volume = search_data.get('search_volume', 0)
+                if direct_volume > 0:
+                    return direct_volume
+                
+                # Try monthly_searches array
+                monthly_searches = search_data.get('monthly_searches', [])
+                if isinstance(monthly_searches, list) and len(monthly_searches) > 0:
                     # Get the most recent month's volume
-                    latest_month = search_volume[-1]
+                    latest_month = monthly_searches[-1]
                     if isinstance(latest_month, dict):
                         return latest_month.get('search_volume', 0)
             return 0
@@ -268,18 +271,35 @@ def process_comprehensive_data(all_data, campaign_id):
             return 0
     
     def extract_difficulty(row):
-        """Extract difficulty from nested traffic_data"""
+        """Extract difficulty from nested traffic_data or opportunity"""
         try:
+            # Try traffic_data.opportunity first
             traffic_data = row.get('traffic_data', {})
-            opportunity = traffic_data.get('opportunity', {})
-            difficulty_str = opportunity.get('difficulty', '')
-            # Convert difficulty string to numeric
-            if 'top_30' in difficulty_str.lower():
-                return 30
-            elif 'top_10' in difficulty_str.lower():
-                return 10
-            elif 'top_5' in difficulty_str.lower():
-                return 5
+            if isinstance(traffic_data, dict):
+                opportunity = traffic_data.get('opportunity', {})
+                if isinstance(opportunity, dict):
+                    difficulty_str = opportunity.get('difficulty', '')
+                    if difficulty_str:
+                        # Convert difficulty string to numeric
+                        if 'top_30' in difficulty_str.lower():
+                            return 30
+                        elif 'top_10' in difficulty_str.lower():
+                            return 10
+                        elif 'top_5' in difficulty_str.lower():
+                            return 5
+            
+            # Try direct opportunity field
+            opportunity = row.get('opportunity', {})
+            if isinstance(opportunity, dict):
+                difficulty_str = opportunity.get('difficulty', '')
+                if difficulty_str:
+                    if 'top_30' in difficulty_str.lower():
+                        return 30
+                    elif 'top_10' in difficulty_str.lower():
+                        return 10
+                    elif 'top_5' in difficulty_str.lower():
+                        return 5
+            
             return 0
         except:
             return 0
@@ -305,13 +325,7 @@ def process_comprehensive_data(all_data, campaign_id):
     processed_df['opportunity_score'] = processed_df['search_volume'] * (11 - processed_df['position']) / 10
     processed_df['priority_level'] = processed_df.apply(calculate_priority_level, axis=1)
     
-    # Add competition analysis
-    if not competitors_df.empty:
-        processed_df = add_competition_analysis(processed_df, competitors_df)
-    
-    # Add share of voice data
-    if not sov_df.empty:
-        processed_df = add_share_of_voice_analysis(processed_df, sov_df)
+    # Note: Competition and share of voice analysis removed as those endpoints don't exist in SEOMonitor API v3
     
     # Store data for learning (session state)
     store_learning_data(processed_df, campaign_id)
