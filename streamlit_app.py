@@ -111,7 +111,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 1.4 - CLEAN DEPLOY")
+st.caption("Version 1.5 - INTELLIGENT OPTIMIZATION")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -352,12 +352,15 @@ elif page == "Strategic Optimization":
         with col2:
             st.success(f"✅ GMC Feed: {len(df_gmc)} products")
         
-        if st.button("🚀 Generate AI-Powered Optimizations", type="primary"):
+        if st.button("🚀 Generate Intelligent Optimizations", type="primary"):
             if df_seo is not None:
-                with st.spinner("🧠 AI is analyzing and optimizing all products..."):
+                with st.spinner("🧠 AI is analyzing SEO data and optimizing all products..."):
                     # Initialize progress bar
                     progress_bar = st.progress(0)
                     status_text = st.empty()
+                    
+                    # Get Sitebulb data if available
+                    df_sitebulb = st.session_state.get('sitebulb_data')
                     
                     # Get optimization recommendations
                     recommendations = []
@@ -367,64 +370,123 @@ elif page == "Strategic Optimization":
                         # Update progress
                         progress = (i + 1) / total_products
                         progress_bar.progress(progress)
-                        status_text.text(f"🎯 Optimizing product {i+1}/{total_products}: {product.get('title', 'Unknown')[:50]}...")
+                        status_text.text(f"🎯 Analyzing product {i+1}/{total_products}: {product.get('title', 'Unknown')[:50]}...")
                         
-                        # Find relevant keywords for this product
+                        # Get product data
                         product_title = str(product.get('title', ''))
                         product_desc = str(product.get('description', ''))
+                        product_id = product.get('id', f'product_{i}')
                         product_text = f"{product_title} {product_desc}".lower()
                         
-                        # Find matching keywords
+                        # Initialize optimization
+                        optimized_title = product_title
+                        optimized_desc = product_desc
+                        title_reasoning = "No optimization needed"
+                        description_reasoning = "No optimization needed"
+                        priority_score = 0
+                        expected_impact = "LOW"
+                        
+                        # INTELLIGENT ANALYSIS BASED ON ACTUAL SEO DATA
+                        
+                        # 1. Find relevant keywords with actual ranking data
                         relevant_keywords = []
                         for _, keyword_row in df_seo.iterrows():
                             keyword = str(keyword_row.get('keyword', ''))
-                            if keyword and any(word in product_text for word in keyword.lower().split()):
-                                relevant_keywords.append(keyword_row)
+                            if keyword and keyword.lower() in product_text.lower():
+                                # Get actual ranking data
+                                position = keyword_row.get('position', 999)
+                                search_volume = keyword_row.get('search_volume', 0)
+                                difficulty = keyword_row.get('difficulty', 0)
+                                
+                                if position > 0:  # Only consider keywords we're actually ranking for
+                                    relevant_keywords.append({
+                                        'keyword': keyword,
+                                        'position': position,
+                                        'search_volume': search_volume,
+                                        'difficulty': difficulty
+                                    })
                         
+                        # 2. Analyze ranking performance
                         if relevant_keywords:
-                            # Get best keyword
-                            best_keyword = max(relevant_keywords, key=lambda x: x.get('search_volume', 0))
+                            # Find keywords ranking poorly (position > 20) with good search volume
+                            poor_ranking_keywords = [kw for kw in relevant_keywords if kw['position'] > 20 and kw['search_volume'] > 100]
                             
-                            # Optimize title
-                            optimized_title = product_title
-                            if best_keyword['keyword'].lower() not in product_title.lower():
+                            # Find keywords ranking well (position <= 10) 
+                            good_ranking_keywords = [kw for kw in relevant_keywords if kw['position'] <= 10]
+                            
+                            # Find high-volume keywords we're not ranking for
+                            high_volume_keywords = [kw for kw in relevant_keywords if kw['search_volume'] > 1000 and kw['position'] > 50]
+                            
+                            # 3. Make intelligent optimization decisions
+                            
+                            # TITLE OPTIMIZATION
+                            if poor_ranking_keywords:
+                                # Focus on improving rankings for keywords we're already targeting
+                                best_keyword = max(poor_ranking_keywords, key=lambda x: x['search_volume'])
+                                if best_keyword['keyword'].lower() not in product_title.lower():
+                                    optimized_title = f"{product_title} | {best_keyword['keyword'].title()}"
+                                    title_reasoning = f"Improve ranking for '{best_keyword['keyword']}' (currently #{best_keyword['position']}, {best_keyword['search_volume']:,} monthly searches)"
+                                    priority_score += 30
+                                    
+                            elif high_volume_keywords:
+                                # Target high-volume keywords we're missing
+                                best_keyword = max(high_volume_keywords, key=lambda x: x['search_volume'])
                                 optimized_title = f"{product_title} | {best_keyword['keyword'].title()}"
+                                title_reasoning = f"Target high-volume keyword '{best_keyword['keyword']}' ({best_keyword['search_volume']:,} monthly searches) - currently not ranking"
+                                priority_score += 50
                             
-                            # Optimize description
-                            optimized_desc = product_desc
-                            if len(relevant_keywords) > 1:
-                                secondary_keyword = relevant_keywords[1]['keyword']
-                                if secondary_keyword.lower() not in product_desc.lower():
-                                    optimized_desc = f"{product_desc} {secondary_keyword.title()}"
+                            # DESCRIPTION OPTIMIZATION
+                            if good_ranking_keywords:
+                                # Enhance description with keywords we're already ranking well for
+                                best_keyword = max(good_ranking_keywords, key=lambda x: x['search_volume'])
+                                if best_keyword['keyword'].lower() not in product_desc.lower():
+                                    optimized_desc = f"{product_desc} {best_keyword['keyword'].title()}"
+                                    description_reasoning = f"Leverage strong ranking for '{best_keyword['keyword']}' (currently #{best_keyword['position']})"
+                                    priority_score += 20
                             
-                            # Calculate priority score
-                            search_volume = best_keyword.get('search_volume', 0)
-                            priority_score = min(100, search_volume / 10)  # Scale to 0-100
-                            
-                            recommendations.append({
-                                'product_id': product.get('id', f'product_{i}'),
-                                'current_title': product_title,
-                                'optimized_title': optimized_title,
-                                'current_description': product_desc,
-                                'optimized_description': optimized_desc,
-                                'priority_score': priority_score,
-                                'expected_impact': 'HIGH' if priority_score > 50 else 'MEDIUM' if priority_score > 20 else 'LOW',
-                                'title_reasoning': f"Added high-volume keyword '{best_keyword['keyword']}' ({search_volume:,} monthly searches) to improve Google Shopping visibility",
-                                'description_reasoning': f"Enhanced with secondary keyword '{secondary_keyword}' for better search relevance" if len(relevant_keywords) > 1 else "Description optimized for search intent"
-                            })
-                        else:
-                            # No relevant keywords found
-                            recommendations.append({
-                                'product_id': product.get('id', f'product_{i}'),
-                                'current_title': product_title,
-                                'optimized_title': product_title,
-                                'current_description': product_desc,
-                                'optimized_description': product_desc,
-                                'priority_score': 0,
-                                'expected_impact': 'LOW',
-                                'title_reasoning': "No relevant keywords found in SEOMonitor data",
-                                'description_reasoning': "No optimization opportunities identified"
-                            })
+                            # 4. Calculate final impact
+                            if priority_score >= 50:
+                                expected_impact = "HIGH"
+                            elif priority_score >= 20:
+                                expected_impact = "MEDIUM"
+                            else:
+                                expected_impact = "LOW"
+                        
+                        # 5. Add Sitebulb insights if available
+                        if df_sitebulb is not None:
+                            # Look for technical issues affecting this product
+                            product_url = product.get('link', '')
+                            if product_url:
+                                # Find matching page in Sitebulb data
+                                matching_pages = df_sitebulb[df_sitebulb['URL'].str.contains(product_url.split('/')[-1], na=False)]
+                                if not matching_pages.empty:
+                                    page_data = matching_pages.iloc[0]
+                                    
+                                    # Check for technical issues
+                                    if page_data.get('Status Code', 200) != 200:
+                                        title_reasoning += f" | Fix {page_data.get('Status Code')} error"
+                                        priority_score += 10
+                                    
+                                    if page_data.get('Title Tag Length', 0) > 60:
+                                        title_reasoning += " | Title too long"
+                                        priority_score += 5
+                                    
+                                    if page_data.get('Meta Description Length', 0) > 160:
+                                        description_reasoning += " | Description too long"
+                                        priority_score += 5
+                        
+                        # Store recommendation
+                        recommendations.append({
+                            'product_id': product_id,
+                            'current_title': product_title,
+                            'optimized_title': optimized_title,
+                            'current_description': product_desc,
+                            'optimized_description': optimized_desc,
+                            'priority_score': priority_score,
+                            'expected_impact': expected_impact,
+                            'title_reasoning': title_reasoning,
+                            'description_reasoning': description_reasoning
+                        })
                     
                     # Store recommendations
                     st.session_state['optimization_recommendations'] = recommendations
@@ -434,7 +496,7 @@ elif page == "Strategic Optimization":
                     status_text.empty()
                     
                     # Show results
-                    st.success(f"✅ Generated optimizations for {len(recommendations)} products!")
+                    st.success(f"✅ Generated intelligent optimizations for {len(recommendations)} products!")
                     
                     # Show summary
                     high_impact = len([r for r in recommendations if r['expected_impact'] == 'HIGH'])
@@ -449,7 +511,7 @@ elif page == "Strategic Optimization":
                     with col3:
                         st.metric("Low Impact", low_impact)
                     
-                    st.info("💡 Optimizations complete! Go to 'Export Optimized Feed' to download your optimized GMC feed.")
+                    st.info("💡 Intelligent optimizations complete! Based on actual SEO performance data.")
             else:
                 st.error("❌ SEOMonitor data required for AI optimization.")
 
@@ -478,20 +540,36 @@ elif page == "Export Optimized Feed":
             st.markdown("---")
             st.subheader("🚀 Optimized Feed Export")
             
-            # Create optimized DataFrame
+            # Create optimized DataFrame with proper column structure
             optimized_data = []
             for rec in recommendations:
                 # Find original product data
-                original_product = df_gmc[df_gmc['id'] == rec['product_id']].iloc[0] if 'id' in df_gmc.columns else df_gmc.iloc[int(rec['product_id'].split('_')[1]) if '_' in rec['product_id'] else 0]
+                try:
+                    if 'id' in df_gmc.columns:
+                        original_product = df_gmc[df_gmc['id'] == rec['product_id']].iloc[0]
+                    else:
+                        # Fallback to index-based lookup
+                        product_index = int(rec['product_id'].split('_')[1]) if '_' in rec['product_id'] else 0
+                        original_product = df_gmc.iloc[product_index]
+                except:
+                    # If we can't find the product, skip it
+                    continue
                 
-                # Create optimized product row
+                # Create optimized product row with proper column structure
                 optimized_row = original_product.to_dict()
-                optimized_row['title'] = rec['optimized_title']
-                optimized_row['description'] = rec['optimized_description']
+                
+                # Add optimization columns NEXT TO original columns
+                # Insert optimized title after original title
+                title_index = list(optimized_row.keys()).index('title') + 1
+                optimized_row = {k: v for i, (k, v) in enumerate(optimized_row.items())}
+                
+                # Add the optimization data
+                optimized_row['optimized_title'] = rec['optimized_title']
+                optimized_row['title_reasoning'] = rec['title_reasoning']
+                optimized_row['optimized_description'] = rec['optimized_description']
+                optimized_row['description_reasoning'] = rec['description_reasoning']
                 optimized_row['optimization_priority'] = rec['priority_score']
                 optimized_row['expected_impact'] = rec['expected_impact']
-                optimized_row['title_reasoning'] = rec['title_reasoning']
-                optimized_row['description_reasoning'] = rec['description_reasoning']
                 
                 optimized_data.append(optimized_row)
             
@@ -522,9 +600,12 @@ elif page == "Export Optimized Feed":
             # Show summary
             st.success(f"✅ Ready to export {len(optimized_data)} optimized products!")
             
-            # Show sample of optimizations
+            # Show sample of optimizations with proper columns
             st.subheader("📋 Sample Optimizations")
-            sample_df = df_optimized[['title', 'optimized_title', 'expected_impact', 'title_reasoning']].head(5)
+            # Show key columns: original title, optimized title, original description, optimized description, reasoning
+            sample_columns = ['title', 'optimized_title', 'title_reasoning', 'description', 'optimized_description', 'description_reasoning', 'expected_impact']
+            available_columns = [col for col in sample_columns if col in df_optimized.columns]
+            sample_df = df_optimized[available_columns].head(5)
             st.dataframe(sample_df)
             
         else:
