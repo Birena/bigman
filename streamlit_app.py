@@ -111,7 +111,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 1.8 - TRULY INTELLIGENT SEO OPTIMIZATION")
+st.caption("Version 2.0 - AI INTELLIGENCE FALLBACK")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -388,28 +388,49 @@ elif page == "Strategic Optimization":
                         
                         # TRULY INTELLIGENT SEO OPTIMIZATION BASED ON PERFORMANCE DATA
                         
-                        # 1. Find relevant keywords with actual ranking data
+                        # 1. Find TRULY relevant keywords with actual ranking data
                         relevant_keywords = []
                         product_words = set(product_text.lower().split())
+                        
+                        # Define furniture-related terms for better matching
+                        furniture_terms = {'sofa', 'chair', 'table', 'desk', 'bed', 'furniture', 'oak', 'wood', 'fabric', 'leather', 'dining', 'living', 'bedroom', 'office', 'recliner', 'storage', 'cabinet', 'wardrobe', 'dresser', 'bookshelf', 'coffee', 'side', 'dining', 'kitchen', 'bathroom', 'outdoor', 'garden'}
                         
                         for _, keyword_row in df_seo.iterrows():
                             keyword = str(keyword_row.get('keyword', ''))
                             if keyword:
                                 keyword_words = set(keyword.lower().split())
                                 
-                                # Smart matching - check if any words overlap
-                                if keyword_words.intersection(product_words) or keyword.lower() in product_text.lower():
-                                    # Get actual ranking data
-                                    position = keyword_row.get('position', 999)
-                                    search_volume = keyword_row.get('search_volume', 0)
-                                    difficulty = keyword_row.get('difficulty', 0)
+                                # Get actual ranking data first
+                                position = keyword_row.get('position', 999)
+                                search_volume = keyword_row.get('search_volume', 0)
+                                difficulty = keyword_row.get('difficulty', 0)
+                                
+                                # STRICT RELEVANCE CHECKING
+                                # 1. Must have actual search volume (> 0)
+                                # 2. Must be semantically relevant to the product
+                                if search_volume > 0:
+                                    # Check for semantic relevance
+                                    is_relevant = False
                                     
-                                    relevant_keywords.append({
-                                        'keyword': keyword,
-                                        'position': position,
-                                        'search_volume': search_volume,
-                                        'difficulty': difficulty
-                                    })
+                                    # Check if keyword contains furniture-related terms
+                                    if keyword_words.intersection(furniture_terms):
+                                        is_relevant = True
+                                    
+                                    # Check if keyword is directly in product text
+                                    elif keyword.lower() in product_text.lower():
+                                        is_relevant = True
+                                    
+                                    # Check for word overlap with product (but be more strict)
+                                    elif len(keyword_words.intersection(product_words)) >= 2:  # At least 2 words must match
+                                        is_relevant = True
+                                    
+                                    if is_relevant:
+                                        relevant_keywords.append({
+                                            'keyword': keyword,
+                                            'position': position,
+                                            'search_volume': search_volume,
+                                            'difficulty': difficulty
+                                        })
                         
                         # 2. INTELLIGENT ANALYSIS BASED ON ACTUAL PERFORMANCE PATTERNS
                         if relevant_keywords:
@@ -421,10 +442,10 @@ elif page == "Strategic Optimization":
                             top_performers = [kw for kw in relevant_keywords if kw['position'] <= 10 and kw['search_volume'] > 0]
                             
                             # Find keywords ranking poorly but with high volume (opportunities)
-                            poor_performers = [kw for kw in relevant_keywords if kw['position'] > 20 and kw['search_volume'] > 100]
+                            poor_performers = [kw for kw in relevant_keywords if kw['position'] > 20 and kw['search_volume'] > 500]
                             
                             # Find high-volume keywords we're not ranking for (gaps)
-                            missing_opportunities = [kw for kw in relevant_keywords if kw['search_volume'] > 500 and kw['position'] > 50]
+                            missing_opportunities = [kw for kw in relevant_keywords if kw['search_volume'] > 1000 and kw['position'] > 50]
                             
                             # 3. LOGICAL OPTIMIZATION DECISIONS BASED ON SEO PATTERNS
                             
@@ -500,6 +521,117 @@ elif page == "Strategic Optimization":
                                 expected_impact = "MEDIUM"
                             else:
                                 expected_impact = "LOW"
+                        else:
+                            # No relevant keywords found - use AI intelligence for basic optimization
+                            # AI-POWERED FALLBACK OPTIMIZATION
+                            
+                            # Extract key product attributes for intelligent optimization
+                            product_words = product_text.lower().split()
+                            
+                            # Identify product type and key features
+                            product_type = None
+                            material = None
+                            color = None
+                            brand = None
+                            
+                            # Common furniture types
+                            furniture_types = {
+                                'sofa': ['sofa', 'settee', 'couch', 'recliner'],
+                                'chair': ['chair', 'dining chair', 'office chair', 'armchair'],
+                                'table': ['table', 'dining table', 'coffee table', 'side table', 'desk'],
+                                'bed': ['bed', 'bedroom', 'mattress', 'headboard'],
+                                'storage': ['wardrobe', 'cabinet', 'dresser', 'bookshelf', 'storage'],
+                                'dining': ['dining', 'dining room', 'dining set'],
+                                'living': ['living room', 'lounge', 'living'],
+                                'office': ['office', 'desk', 'office chair', 'office furniture']
+                            }
+                            
+                            # Identify product type
+                            for ftype, keywords in furniture_types.items():
+                                if any(kw in product_text.lower() for kw in keywords):
+                                    product_type = ftype
+                                    break
+                            
+                            # Extract material
+                            materials = ['oak', 'wood', 'fabric', 'leather', 'metal', 'glass', 'marble', 'mink', 'velvet', 'cotton', 'linen']
+                            for mat in materials:
+                                if mat in product_text.lower():
+                                    material = mat
+                                    break
+                            
+                            # Extract color
+                            colors = ['white', 'black', 'brown', 'grey', 'gray', 'beige', 'cream', 'navy', 'blue', 'red', 'green', 'mink', 'charcoal']
+                            for col in colors:
+                                if col in product_text.lower():
+                                    color = col
+                                    break
+                            
+                            # Extract brand
+                            if 'oak furnitureland' in product_text.lower():
+                                brand = 'Oak Furnitureland'
+                            
+                            # AI INTELLIGENT OPTIMIZATION BASED ON PRODUCT ANALYSIS
+                            if product_type and material:
+                                # Create intelligent title optimization
+                                if product_type == 'sofa' and material:
+                                    optimized_title = f"{material.title()} {product_type.title()} | {product_title}"
+                                    title_reasoning = f"AI optimization: Prioritize '{material.title()} {product_type.title()}' - high-value keywords for furniture searches"
+                                    priority_score += 20
+                                    
+                                elif product_type == 'table' and material:
+                                    optimized_title = f"{material.title()} {product_type.title()} | {product_title}"
+                                    title_reasoning = f"AI optimization: Prioritize '{material.title()} {product_type.title()}' - common search terms for furniture"
+                                    priority_score += 20
+                                    
+                                elif product_type == 'chair' and material:
+                                    optimized_title = f"{material.title()} {product_type.title()} | {product_title}"
+                                    title_reasoning = f"AI optimization: Prioritize '{material.title()} {product_type.title()}' - popular furniture search terms"
+                                    priority_score += 20
+                                
+                                # Add brand if not prominent
+                                if brand and brand.lower() not in product_title.lower():
+                                    optimized_title = f"{optimized_title} | {brand}"
+                                    title_reasoning += f" - Added brand '{brand}' for authority"
+                                    priority_score += 10
+                                
+                                # Description optimization
+                                if product_type and material:
+                                    optimized_desc = f"{product_desc} Premium {material.title()} {product_type.title()} from {brand if brand else 'Oak Furnitureland'} - Quality furniture for modern homes."
+                                    description_reasoning = f"AI optimization: Enhanced description with '{material.title()} {product_type.title()}' keywords and brand authority"
+                                    priority_score += 15
+                                
+                                # Set impact level
+                                if priority_score >= 30:
+                                    expected_impact = "MEDIUM"
+                                else:
+                                    expected_impact = "LOW"
+                                    
+                            else:
+                                # Fallback - basic title structure optimization
+                                words = product_title.split()
+                                if len(words) > 8:  # Title too long
+                                    # Move key words to front
+                                    key_words = []
+                                    remaining_words = []
+                                    
+                                    for word in words:
+                                        if word.lower() in ['oak', 'furniture', 'sofa', 'chair', 'table', 'bed', 'dining', 'living', 'office']:
+                                            key_words.append(word)
+                                        else:
+                                            remaining_words.append(word)
+                                    
+                                    if key_words:
+                                        optimized_title = f"{' '.join(key_words)} | {' '.join(remaining_words)}"
+                                        title_reasoning = f"AI optimization: Restructured title to prioritize key furniture terms - improved readability and SEO"
+                                        priority_score += 15
+                                        expected_impact = "LOW"
+                                
+                                # Basic description enhancement
+                                if len(product_desc) < 100:  # Description too short
+                                    optimized_desc = f"{product_desc} Quality furniture from Oak Furnitureland - Free delivery and expert customer service."
+                                    description_reasoning = f"AI optimization: Enhanced short description with trust signals and brand mention"
+                                    priority_score += 10
+                                    expected_impact = "LOW"
                         
                         # 5. Add Sitebulb insights if available
                         if df_sitebulb is not None:
@@ -565,15 +697,25 @@ elif page == "Strategic Optimization":
                     # Show debugging info
                     if recommendations:
                         st.subheader("🔍 Debugging Info")
-                        optimized_count = len([r for r in recommendations if r['title_reasoning'] != "No optimization needed"])
+                        optimized_count = len([r for r in recommendations if r['title_reasoning'] != "No optimization needed" and r['title_reasoning'] != "No relevant keywords with search volume found"])
                         st.write(f"Products with optimizations: {optimized_count}/{len(recommendations)}")
                         
                         # Show sample of what was found
-                        sample_recs = [r for r in recommendations if r['title_reasoning'] != "No optimization needed"][:3]
+                        sample_recs = [r for r in recommendations if r['title_reasoning'] not in ["No optimization needed", "No relevant keywords with search volume found"]][:3]
                         if sample_recs:
                             st.write("Sample optimizations:")
                             for rec in sample_recs:
                                 st.write(f"- {rec['title_reasoning']}")
+                        else:
+                            st.warning("⚠️ No optimizations found - this could mean:")
+                            st.write("• Keywords have zero search volume")
+                            st.write("• Keywords are not semantically relevant to products")
+                            st.write("• SEOMonitor data extraction issues")
+                        
+                        # Show AI intelligence usage
+                        ai_optimizations = len([r for r in recommendations if "AI optimization:" in r['title_reasoning']])
+                        if ai_optimizations > 0:
+                            st.info(f"🤖 AI Intelligence used for {ai_optimizations} products (when SEOMonitor data wasn't sufficient)")
             else:
                 st.error("❌ SEOMonitor data required for AI optimization.")
 
