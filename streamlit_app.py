@@ -111,7 +111,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 1.5 - INTELLIGENT OPTIMIZATION")
+st.caption("Version 1.8 - TRULY INTELLIGENT SEO OPTIMIZATION")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -386,19 +386,24 @@ elif page == "Strategic Optimization":
                         priority_score = 0
                         expected_impact = "LOW"
                         
-                        # INTELLIGENT ANALYSIS BASED ON ACTUAL SEO DATA
+                        # TRULY INTELLIGENT SEO OPTIMIZATION BASED ON PERFORMANCE DATA
                         
                         # 1. Find relevant keywords with actual ranking data
                         relevant_keywords = []
+                        product_words = set(product_text.lower().split())
+                        
                         for _, keyword_row in df_seo.iterrows():
                             keyword = str(keyword_row.get('keyword', ''))
-                            if keyword and keyword.lower() in product_text.lower():
-                                # Get actual ranking data
-                                position = keyword_row.get('position', 999)
-                                search_volume = keyword_row.get('search_volume', 0)
-                                difficulty = keyword_row.get('difficulty', 0)
+                            if keyword:
+                                keyword_words = set(keyword.lower().split())
                                 
-                                if position > 0:  # Only consider keywords we're actually ranking for
+                                # Smart matching - check if any words overlap
+                                if keyword_words.intersection(product_words) or keyword.lower() in product_text.lower():
+                                    # Get actual ranking data
+                                    position = keyword_row.get('position', 999)
+                                    search_volume = keyword_row.get('search_volume', 0)
+                                    difficulty = keyword_row.get('difficulty', 0)
+                                    
                                     relevant_keywords.append({
                                         'keyword': keyword,
                                         'position': position,
@@ -406,48 +411,92 @@ elif page == "Strategic Optimization":
                                         'difficulty': difficulty
                                     })
                         
-                        # 2. Analyze ranking performance
+                        # 2. INTELLIGENT ANALYSIS BASED ON ACTUAL PERFORMANCE PATTERNS
                         if relevant_keywords:
-                            # Find keywords ranking poorly (position > 20) with good search volume
-                            poor_ranking_keywords = [kw for kw in relevant_keywords if kw['position'] > 20 and kw['search_volume'] > 100]
+                            # Sort by search volume to prioritize opportunities
+                            relevant_keywords.sort(key=lambda x: x['search_volume'], reverse=True)
                             
-                            # Find keywords ranking well (position <= 10) 
-                            good_ranking_keywords = [kw for kw in relevant_keywords if kw['position'] <= 10]
+                            # ANALYZE WHAT MAKES PRODUCTS RANK WELL
+                            # Find keywords ranking in top 10 (successful patterns)
+                            top_performers = [kw for kw in relevant_keywords if kw['position'] <= 10 and kw['search_volume'] > 0]
                             
-                            # Find high-volume keywords we're not ranking for
-                            high_volume_keywords = [kw for kw in relevant_keywords if kw['search_volume'] > 1000 and kw['position'] > 50]
+                            # Find keywords ranking poorly but with high volume (opportunities)
+                            poor_performers = [kw for kw in relevant_keywords if kw['position'] > 20 and kw['search_volume'] > 100]
                             
-                            # 3. Make intelligent optimization decisions
+                            # Find high-volume keywords we're not ranking for (gaps)
+                            missing_opportunities = [kw for kw in relevant_keywords if kw['search_volume'] > 500 and kw['position'] > 50]
                             
-                            # TITLE OPTIMIZATION
-                            if poor_ranking_keywords:
-                                # Focus on improving rankings for keywords we're already targeting
-                                best_keyword = max(poor_ranking_keywords, key=lambda x: x['search_volume'])
-                                if best_keyword['keyword'].lower() not in product_title.lower():
-                                    optimized_title = f"{product_title} | {best_keyword['keyword'].title()}"
-                                    title_reasoning = f"Improve ranking for '{best_keyword['keyword']}' (currently #{best_keyword['position']}, {best_keyword['search_volume']:,} monthly searches)"
-                                    priority_score += 30
+                            # 3. LOGICAL OPTIMIZATION DECISIONS BASED ON SEO PATTERNS
+                            
+                            # TITLE OPTIMIZATION - Based on what works
+                            if top_performers:
+                                # Analyze what makes top performers successful
+                                best_performer = top_performers[0]
+                                
+                                # Check if the successful keyword is prominently placed in title
+                                if best_performer['keyword'].lower() not in product_title.lower():
+                                    # Move successful keyword to front of title
+                                    optimized_title = f"{best_performer['keyword'].title()} {product_title}"
+                                    title_reasoning = f"Move high-performing keyword '{best_performer['keyword']}' to front (ranks #{best_performer['position']}, {best_performer['search_volume']:,} searches) - proven to work"
+                                    priority_score += 40
+                                else:
+                                    # Keyword is in title but not prominent - restructure
+                                    words = product_title.split()
+                                    keyword_words = best_performer['keyword'].lower().split()
                                     
-                            elif high_volume_keywords:
-                                # Target high-volume keywords we're missing
-                                best_keyword = max(high_volume_keywords, key=lambda x: x['search_volume'])
-                                optimized_title = f"{product_title} | {best_keyword['keyword'].title()}"
-                                title_reasoning = f"Target high-volume keyword '{best_keyword['keyword']}' ({best_keyword['search_volume']:,} monthly searches) - currently not ranking"
-                                priority_score += 50
+                                    # Find where keyword appears and move to front
+                                    for i, word in enumerate(words):
+                                        if word.lower() in keyword_words:
+                                            # Move keyword to front
+                                            keyword_part = ' '.join([w for w in words if w.lower() in keyword_words])
+                                            remaining_words = [w for w in words if w.lower() not in keyword_words]
+                                            optimized_title = f"{keyword_part.title()} {' '.join(remaining_words)}"
+                                            title_reasoning = f"Restructure title to prioritize '{best_performer['keyword']}' (ranks #{best_performer['position']}) - move to front for better visibility"
+                                            priority_score += 35
+                                            break
+                                    
+                            elif poor_performers:
+                                # Focus on improving poor performers with high volume
+                                best_opportunity = poor_performers[0]
+                                
+                                # Check if keyword is in title but not prominent
+                                if best_opportunity['keyword'].lower() in product_title.lower():
+                                    # Keyword is there but not working - move to front
+                                    words = product_title.split()
+                                    keyword_words = best_opportunity['keyword'].lower().split()
+                                    
+                                    # Move keyword to front
+                                    keyword_part = ' '.join([w for w in words if w.lower() in keyword_words])
+                                    remaining_words = [w for w in words if w.lower() not in keyword_words]
+                                    optimized_title = f"{keyword_part.title()} {' '.join(remaining_words)}"
+                                    title_reasoning = f"Move '{best_opportunity['keyword']}' to front - currently ranks #{best_opportunity['position']} but has {best_opportunity['search_volume']:,} searches (high potential)"
+                                    priority_score += 45
+                                else:
+                                    # Add missing high-volume keyword
+                                    optimized_title = f"{best_opportunity['keyword'].title()} {product_title}"
+                                    title_reasoning = f"Add high-volume keyword '{best_opportunity['keyword']}' ({best_opportunity['search_volume']:,} searches) - currently ranking #{best_opportunity['position']} but can improve"
+                                    priority_score += 50
+                                    
+                            elif missing_opportunities:
+                                # Target completely missing high-volume keywords
+                                best_missing = missing_opportunities[0]
+                                optimized_title = f"{best_missing['keyword'].title()} {product_title}"
+                                title_reasoning = f"Target missing high-volume keyword '{best_missing['keyword']}' ({best_missing['search_volume']:,} searches) - not currently ranking, big opportunity"
+                                priority_score += 60
                             
-                            # DESCRIPTION OPTIMIZATION
-                            if good_ranking_keywords:
-                                # Enhance description with keywords we're already ranking well for
-                                best_keyword = max(good_ranking_keywords, key=lambda x: x['search_volume'])
-                                if best_keyword['keyword'].lower() not in product_desc.lower():
-                                    optimized_desc = f"{product_desc} {best_keyword['keyword'].title()}"
-                                    description_reasoning = f"Leverage strong ranking for '{best_keyword['keyword']}' (currently #{best_keyword['position']})"
-                                    priority_score += 20
+                            # DESCRIPTION OPTIMIZATION - Based on successful patterns
+                            if top_performers:
+                                # Use successful keywords in description for reinforcement
+                                best_performer = top_performers[0]
+                                if best_performer['keyword'].lower() not in product_desc.lower():
+                                    optimized_desc = f"{product_desc} {best_performer['keyword'].title()}"
+                                    description_reasoning = f"Reinforce successful keyword '{best_performer['keyword']}' in description (ranks #{best_performer['position']}) - helps maintain ranking"
+                                    priority_score += 25
                             
-                            # 4. Calculate final impact
-                            if priority_score >= 50:
+                            # 4. Calculate impact based on actual SEO value
+                            if priority_score >= 60:
                                 expected_impact = "HIGH"
-                            elif priority_score >= 20:
+                            elif priority_score >= 35:
                                 expected_impact = "MEDIUM"
                             else:
                                 expected_impact = "LOW"
@@ -512,6 +561,19 @@ elif page == "Strategic Optimization":
                         st.metric("Low Impact", low_impact)
                     
                     st.info("💡 Intelligent optimizations complete! Based on actual SEO performance data.")
+                    
+                    # Show debugging info
+                    if recommendations:
+                        st.subheader("🔍 Debugging Info")
+                        optimized_count = len([r for r in recommendations if r['title_reasoning'] != "No optimization needed"])
+                        st.write(f"Products with optimizations: {optimized_count}/{len(recommendations)}")
+                        
+                        # Show sample of what was found
+                        sample_recs = [r for r in recommendations if r['title_reasoning'] != "No optimization needed"][:3]
+                        if sample_recs:
+                            st.write("Sample optimizations:")
+                            for rec in sample_recs:
+                                st.write(f"- {rec['title_reasoning']}")
             else:
                 st.error("❌ SEOMonitor data required for AI optimization.")
 
@@ -584,18 +646,22 @@ elif page == "Export Optimized Feed":
                 mime="text/csv"
             )
             
-            # Export optimized Excel
-            import io
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_optimized.to_excel(writer, sheet_name='Optimized Feed', index=False)
-            
-            st.download_button(
-                label="⬇️ Download Optimized XLSX (with reasons)",
-                data=output.getvalue(),
-                file_name=f"optimized_{st.session_state.get('gmc_file', 'gmc_feed')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            # Export optimized Excel (with fallback)
+            try:
+                import io
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df_optimized.to_excel(writer, sheet_name='Optimized Feed', index=False)
+                
+                st.download_button(
+                    label="⬇️ Download Optimized XLSX (with reasons)",
+                    data=output.getvalue(),
+                    file_name=f"optimized_{st.session_state.get('gmc_file', 'gmc_feed')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            except ImportError:
+                st.warning("⚠️ Excel export requires openpyxl package. CSV download available above.")
+                st.info("💡 To enable Excel export, add 'openpyxl' to requirements.txt")
             
             # Show summary
             st.success(f"✅ Ready to export {len(optimized_data)} optimized products!")
