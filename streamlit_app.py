@@ -277,7 +277,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 3.1 - RESULTS-DRIVEN FEATURES")
+st.caption("Version 3.2 - FIXED TYPEERROR")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -711,6 +711,16 @@ elif page == "Strategic Optimization":
                                             product_grid_position = local_pack.get('position', 999)
                                 except:
                                     pass
+                                
+                                # Ensure all values are numbers
+                                try:
+                                    search_volume = float(search_volume) if search_volume is not None else 0
+                                    position = float(position) if position is not None else 999
+                                    difficulty = float(difficulty) if difficulty is not None else 0
+                                except (ValueError, TypeError):
+                                    search_volume = 0
+                                    position = 999
+                                    difficulty = 0
                                 
                                 # STRICT RELEVANCE CHECKING
                                 # 1. Must have actual search volume (> 0)
