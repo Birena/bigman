@@ -277,7 +277,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 2.6 - COMPLETE ERROR HANDLING FIX")
+st.caption("Version 3.1 - RESULTS-DRIVEN FEATURES")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -360,6 +360,8 @@ page = st.sidebar.selectbox("Choose a section", [
     "Sitebulb Upload",
     "SEOMonitor API", 
     "Strategic Optimization",
+    "Quick Wins",
+    "Optimization Summary",
     "Export Optimized Feed"
 ])
 
@@ -590,10 +592,125 @@ elif page == "Strategic Optimization":
                             if keyword:
                                 keyword_words = set(keyword.lower().split())
                                 
-                                # Get actual ranking data first
-                                position = keyword_row.get('position', 999)
-                                search_volume = keyword_row.get('search_volume', 0)
-                                difficulty = keyword_row.get('difficulty', 0)
+                                # Extract search volume from nested data structures
+                                search_volume = 0
+                                position = 999
+                                difficulty = 0
+                                
+                                # Try to extract search volume from different possible locations
+                                try:
+                                    # Method 1: Direct search_volume field
+                                    search_volume = keyword_row.get('search_volume', 0)
+                                except:
+                                    pass
+                                
+                                if search_volume == 0:
+                                    try:
+                                        # Method 2: Alternative field names
+                                        search_volume = keyword_row.get('volume', 0)
+                                        if search_volume == 0:
+                                            search_volume = keyword_row.get('monthly_searches', 0)
+                                        if search_volume == 0:
+                                            search_volume = keyword_row.get('search_volume_monthly', 0)
+                                    except:
+                                        pass
+                                
+                                if search_volume == 0:
+                                    try:
+                                        # Method 3: From search_data (nested JSON)
+                                        search_data = keyword_row.get('search_data', {})
+                                        if isinstance(search_data, dict):
+                                            search_volume = search_data.get('search_volume', 0)
+                                            if search_volume == 0:
+                                                search_volume = search_data.get('volume', 0)
+                                            if search_volume == 0:
+                                                search_volume = search_data.get('monthly_searches', 0)
+                                        elif isinstance(search_data, list) and len(search_data) > 0:
+                                            search_volume = search_data[0].get('search_volume', 0)
+                                            if search_volume == 0:
+                                                search_volume = search_data[0].get('volume', 0)
+                                            if search_volume == 0:
+                                                search_volume = search_data[0].get('monthly_searches', 0)
+                                    except:
+                                        pass
+                                
+                                if search_volume == 0:
+                                    try:
+                                        # Method 4: From traffic_data (nested JSON)
+                                        traffic_data = keyword_row.get('traffic_data', {})
+                                        if isinstance(traffic_data, dict):
+                                            search_volume = traffic_data.get('search_volume', 0)
+                                            if search_volume == 0:
+                                                search_volume = traffic_data.get('volume', 0)
+                                            if search_volume == 0:
+                                                search_volume = traffic_data.get('monthly_searches', 0)
+                                    except:
+                                        pass
+                                
+                                # Try to extract position from different possible locations
+                                try:
+                                    # Method 1: Direct position field
+                                    position = keyword_row.get('position', 999)
+                                except:
+                                    pass
+                                
+                                if position == 999:
+                                    try:
+                                        # Method 2: From ranking_data (nested JSON)
+                                        ranking_data = keyword_row.get('ranking_data', {})
+                                        if isinstance(ranking_data, dict):
+                                            position = ranking_data.get('desktop', {}).get('rank', 999)
+                                            if position == 999:
+                                                position = ranking_data.get('mobile', {}).get('rank', 999)
+                                    except:
+                                        pass
+                                
+                                # Try to extract difficulty from different possible locations
+                                try:
+                                    # Method 1: Direct difficulty field
+                                    difficulty = keyword_row.get('difficulty', 0)
+                                except:
+                                    pass
+                                
+                                if difficulty == 0:
+                                    try:
+                                        # Method 2: From opportunity field
+                                        opportunity = keyword_row.get('opportunity', {})
+                                        if isinstance(opportunity, dict):
+                                            difficulty = opportunity.get('difficulty', 0)
+                                        elif isinstance(opportunity, str):
+                                            # Convert text difficulty to numeric
+                                            if 'top_30' in opportunity.lower():
+                                                difficulty = 30
+                                            elif 'top_10' in opportunity.lower():
+                                                difficulty = 10
+                                            elif 'top_50' in opportunity.lower():
+                                                difficulty = 50
+                                    except:
+                                        pass
+                                
+                                # Extract product grid ranking data (Shopping/Product results)
+                                product_grid_position = 999
+                                try:
+                                    # Look for shopping/product grid rankings
+                                    serp_data = keyword_row.get('serp_data', {})
+                                    if isinstance(serp_data, dict):
+                                        # Check for shopping results
+                                        shopping_results = serp_data.get('shopping_results', {})
+                                        if isinstance(shopping_results, dict):
+                                            product_grid_position = shopping_results.get('position', 999)
+                                        
+                                        # Check for product results
+                                        product_results = serp_data.get('product_results', {})
+                                        if isinstance(product_results, dict):
+                                            product_grid_position = product_results.get('position', 999)
+                                        
+                                        # Check for local pack results
+                                        local_pack = serp_data.get('local_pack', {})
+                                        if isinstance(local_pack, dict):
+                                            product_grid_position = local_pack.get('position', 999)
+                                except:
+                                    pass
                                 
                                 # STRICT RELEVANCE CHECKING
                                 # 1. Must have actual search volume (> 0)
@@ -619,7 +736,8 @@ elif page == "Strategic Optimization":
                                             'keyword': keyword,
                                             'position': position,
                                             'search_volume': search_volume,
-                                            'difficulty': difficulty
+                                            'difficulty': difficulty,
+                                            'product_grid_position': product_grid_position
                                         })
                         
                         # 2. INTELLIGENT ANALYSIS BASED ON ACTUAL PERFORMANCE PATTERNS
@@ -640,6 +758,12 @@ elif page == "Strategic Optimization":
                             # Find low-difficulty, high-volume opportunities (easier wins)
                             easy_wins = [kw for kw in relevant_keywords if kw['difficulty'] < 30 and kw['search_volume'] > 300 and kw['position'] > 30]
                             
+                            # Find product grid opportunities (Shopping/Product results)
+                            product_grid_opportunities = [kw for kw in relevant_keywords if kw['product_grid_position'] > 10 and kw['search_volume'] > 200]
+                            
+                            # Find product grid winners (already ranking well in shopping)
+                            product_grid_winners = [kw for kw in relevant_keywords if kw['product_grid_position'] <= 5 and kw['search_volume'] > 100]
+                            
                             # 3. LOGICAL OPTIMIZATION DECISIONS BASED ON SEO PATTERNS
                             
                             # TITLE OPTIMIZATION - Prioritize easy wins first
@@ -649,6 +773,21 @@ elif page == "Strategic Optimization":
                                 optimized_title = f"{best_easy_win['keyword'].title()} | {product_title}"
                                 title_reasoning = f"EASY WIN: Target '{best_easy_win['keyword']}' ({best_easy_win['search_volume']:,} searches, difficulty {best_easy_win['difficulty']}) - low competition opportunity"
                                 priority_score += 70
+                                
+                            elif product_grid_opportunities:
+                                # Focus on product grid opportunities (Shopping results)
+                                best_grid_opportunity = product_grid_opportunities[0]
+                                optimized_title = f"{best_grid_opportunity['keyword'].title()} | {product_title}"
+                                title_reasoning = f"PRODUCT GRID OPPORTUNITY: Target '{best_grid_opportunity['keyword']}' ({best_grid_opportunity['search_volume']:,} searches, shopping position #{best_grid_opportunity['product_grid_position']}) - optimize for product visibility"
+                                priority_score += 65
+                                
+                            elif product_grid_winners:
+                                # Reinforce product grid winners
+                                best_grid_winner = product_grid_winners[0]
+                                if best_grid_winner['keyword'].lower() not in product_title.lower():
+                                    optimized_title = f"{best_grid_winner['keyword'].title()} | {product_title}"
+                                    title_reasoning = f"PRODUCT GRID WINNER: Reinforce '{best_grid_winner['keyword']}' ({best_grid_winner['search_volume']:,} searches, shopping position #{best_grid_winner['product_grid_position']}) - maintain shopping visibility"
+                                    priority_score += 60
                                 
                             elif top_performers:
                                 # Analyze what makes top performers successful
@@ -783,189 +922,148 @@ elif page == "Strategic Optimization":
                                 # Check if material is already prominent in title
                                 material_already_prominent = material.lower() in product_title.lower()[:50]  # Check first 50 chars
                                 
-                                if not material_already_prominent:
-                                    # INTELLIGENT PRODUCT INTENT ANALYSIS
-                                    # Analyze what customers are actually searching for based on product attributes
+                                # INTELLIGENT PRODUCT INTENT ANALYSIS
+                                # Analyze what customers are actually searching for based on product attributes
+                                
+                                # Extract additional product attributes for better targeting
+                                size_info = ""
+                                style_info = ""
+                                color_info = ""
+                                special_features = []
+                                
+                                # Look for size information
+                                if any(size in product_text.lower() for size in ['2 seat', '3 seat', '4 seat', 'corner', 'modular']):
+                                    if '2 seat' in product_text.lower():
+                                        size_info = "2 Seater"
+                                    elif '3 seat' in product_text.lower():
+                                        size_info = "3 Seater"
+                                    elif '4 seat' in product_text.lower():
+                                        size_info = "4 Seater"
+                                    elif 'corner' in product_text.lower():
+                                        size_info = "Corner"
+                                    elif 'modular' in product_text.lower():
+                                        size_info = "Modular"
+                                
+                                # Look for style information
+                                if any(style in product_text.lower() for style in ['modern', 'contemporary', 'traditional', 'classic', 'luxury', 'premium']):
+                                    for style in ['modern', 'contemporary', 'traditional', 'classic', 'luxury', 'premium']:
+                                        if style in product_text.lower():
+                                            style_info = style.title()
+                                            break
+                                
+                                # Look for color information
+                                if any(color in product_text.lower() for color in ['beige', 'brown', 'grey', 'gray', 'white', 'black', 'navy', 'blue']):
+                                    for color in ['beige', 'brown', 'grey', 'gray', 'white', 'black', 'navy', 'blue']:
+                                        if color in product_text.lower():
+                                            color_info = color.title()
+                                            break
+                                
+                                # Look for special features
+                                if 'recliner' in product_text.lower():
+                                    special_features.append('Recliner')
+                                if 'storage' in product_text.lower():
+                                    special_features.append('Storage')
+                                if 'power' in product_text.lower():
+                                    special_features.append('Power')
+                                
+                                # CREATE INTELLIGENT TITLE BASED ON SEARCH INTENT
+                                # Prioritize what customers actually search for
+                                search_intent_keywords = []
+                                
+                                # Add size if it's a key differentiator
+                                if size_info and size_info in ['2 Seater', '3 Seater', '4 Seater', 'Corner']:
+                                    search_intent_keywords.append(size_info)
+                                
+                                # Add material (but only if it's a key selling point)
+                                if material in ['leather', 'fabric', 'oak', 'wood']:
+                                    search_intent_keywords.append(f"{material.title()}")
+                                
+                                # Add product type
+                                search_intent_keywords.append(f"{product_type.title()}")
+                                
+                                # Add special features if they're important
+                                if special_features:
+                                    search_intent_keywords.extend(special_features[:1])  # Limit to 1 special feature
+                                
+                                # Create optimized title with search intent
+                                if search_intent_keywords:
+                                    intent_keywords = " ".join(search_intent_keywords)
+                                    optimized_title = f"{intent_keywords} | {product_title}"
+                                    title_reasoning = f"AI optimization: Prioritize '{intent_keywords}' - matches customer search intent for {product_type} with {material} material"
+                                    priority_score += 25
+                                
+                                # Add brand if not prominent
+                                if brand and brand.lower() not in product_title.lower():
+                                    optimized_title = f"{optimized_title} | {brand}"
+                                    title_reasoning += f" - Added brand '{brand}' for authority"
+                                    priority_score += 10
+                                
+                                # Description optimization based on search intent
+                                if product_type and material:
+                                    # Create description that matches search intent
+                                    intent_desc = f"{product_desc} "
+                                    if size_info:
+                                        intent_desc += f"Perfect {size_info.lower()} {product_type} "
+                                    if style_info:
+                                        intent_desc += f"in {style_info.lower()} style "
+                                    if color_info:
+                                        intent_desc += f"in {color_info.lower()} color. "
+                                    intent_desc += f"Premium {material.title()} {product_type.title()} from {brand if brand else 'Oak Furnitureland'} - Quality furniture for modern homes."
                                     
-                                    # Extract additional product attributes for better targeting
-                                    size_info = ""
-                                    style_info = ""
-                                    color_info = ""
-                                    special_features = []
-                                    
-                                    # Look for size information
-                                    if any(size in product_text.lower() for size in ['2 seat', '3 seat', '4 seat', 'corner', 'modular']):
-                                        if '2 seat' in product_text.lower():
-                                            size_info = "2 Seater"
-                                        elif '3 seat' in product_text.lower():
-                                            size_info = "3 Seater"
-                                        elif '4 seat' in product_text.lower():
-                                            size_info = "4 Seater"
-                                        elif 'corner' in product_text.lower():
-                                            size_info = "Corner"
-                                        elif 'modular' in product_text.lower():
-                                            size_info = "Modular"
-                                    
-                                    # Look for style information
-                                    if any(style in product_text.lower() for style in ['modern', 'contemporary', 'traditional', 'classic', 'luxury', 'premium']):
-                                        for style in ['modern', 'contemporary', 'traditional', 'classic', 'luxury', 'premium']:
-                                            if style in product_text.lower():
-                                                style_info = style.title()
-                                                break
-                                    
-                                    # Look for color information
-                                    if any(color in product_text.lower() for color in ['beige', 'brown', 'grey', 'gray', 'white', 'black', 'navy', 'blue']):
-                                        for color in ['beige', 'brown', 'grey', 'gray', 'white', 'black', 'navy', 'blue']:
-                                            if color in product_text.lower():
-                                                color_info = color.title()
-                                                break
-                                    
-                                    # Look for special features
-                                    if 'recliner' in product_text.lower():
-                                        special_features.append('Recliner')
-                                    if 'storage' in product_text.lower():
-                                        special_features.append('Storage')
-                                    if 'power' in product_text.lower():
-                                        special_features.append('Power')
-                                    
-                                    # CREATE INTELLIGENT TITLE BASED ON SEARCH INTENT
-                                    # Prioritize what customers actually search for
-                                    search_intent_keywords = []
-                                    
-                                    # Add size if it's a key differentiator
-                                    if size_info and size_info in ['2 Seater', '3 Seater', '4 Seater', 'Corner']:
-                                        search_intent_keywords.append(size_info)
-                                    
-                                    # Add material (but only if it's a key selling point)
-                                    if material in ['leather', 'fabric', 'oak', 'wood']:
-                                        search_intent_keywords.append(f"{material.title()}")
-                                    
-                                    # Add product type
-                                    search_intent_keywords.append(f"{product_type.title()}")
-                                    
-                                    # Add special features if they're important
-                                    if special_features:
-                                        search_intent_keywords.extend(special_features[:1])  # Limit to 1 special feature
-                                    
-                                    # Create optimized title with search intent
-                                    if search_intent_keywords:
-                                        intent_keywords = " ".join(search_intent_keywords)
-                                        optimized_title = f"{intent_keywords} | {product_title}"
-                                        title_reasoning = f"AI optimization: Prioritize '{intent_keywords}' - matches customer search intent for {product_type} with {material} material"
-                                        priority_score += 25
-                                    
-                                    # Add brand if not prominent
-                                    if brand and brand.lower() not in product_title.lower():
-                                        optimized_title = f"{optimized_title} | {brand}"
-                                        title_reasoning += f" - Added brand '{brand}' for authority"
-                                        priority_score += 10
-                                    
-                                    # Description optimization based on search intent
-                                    if product_type and material:
-                                        # Create description that matches search intent
-                                        intent_desc = f"{product_desc} "
-                                        if size_info:
-                                            intent_desc += f"Perfect {size_info.lower()} {product_type} "
-                                        if style_info:
-                                            intent_desc += f"in {style_info.lower()} style "
-                                        if color_info:
-                                            intent_desc += f"in {color_info.lower()} color. "
-                                        intent_desc += f"Premium {material.title()} {product_type.title()} from {brand if brand else 'Oak Furnitureland'} - Quality furniture for modern homes."
-                                        
-                                        optimized_desc = intent_desc
-                                        description_reasoning = f"AI optimization: Enhanced description with search intent keywords - {size_info if size_info else material.title()} {product_type.title()}"
-                                        priority_score += 15
-                                    
-                                    # Set impact level
-                                    if priority_score >= 30:
-                                        expected_impact = "MEDIUM"
-                                    else:
-                                        expected_impact = "LOW"
+                                    optimized_desc = intent_desc
+                                    description_reasoning = f"AI optimization: Enhanced description with search intent keywords - {size_info if size_info else material.title()} {product_type.title()}"
+                                    priority_score += 15
+                                
+                                # Set impact level
+                                if priority_score >= 30:
+                                    expected_impact = "MEDIUM"
                                 else:
-                                    # Material already prominent - no optimization needed
-                                    title_reasoning = f"AI analysis: '{material.title()}' already prominent in title - no optimization needed"
+                                    expected_impact = "LOW"
                                     
                             else:
-                                # Fallback - use search volume data strategically even without direct relevance
-                                # Look for high-volume furniture keywords that could be relevant
-                                if df_seo is not None:
-                                    try:
-                                        # Get high-volume furniture keywords
-                                        high_volume_furniture = df_seo[
-                                            (df_seo['search_volume'] > 500) & 
-                                            (df_seo['search_volume'] < 5000) &  # Not too competitive
-                                            (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture', 'oak']), case=False, na=False))
-                                        ].sort_values('search_volume', ascending=False)
-                                        
-                                        if not high_volume_furniture.empty:
-                                            # Use the highest volume relevant keyword
-                                            best_keyword = high_volume_furniture.iloc[0]['keyword']
-                                            search_volume = high_volume_furniture.iloc[0]['search_volume']
-                                            
-                                            optimized_title = f"{best_keyword.title()} | {product_title}"
-                                            title_reasoning = f"AI optimization: Added high-volume keyword '{best_keyword}' ({search_volume:,} searches) - strategic opportunity"
-                                            priority_score += 30
-                                            expected_impact = "MEDIUM"
-                                            
-                                            # Enhanced description
-                                            optimized_desc = f"{product_desc} {best_keyword.title()} from Oak Furnitureland - Quality furniture with free delivery."
-                                            description_reasoning = f"AI optimization: Enhanced with high-volume keyword '{best_keyword}' for better search visibility"
-                                            priority_score += 15
+                                # Fallback - ALWAYS optimize with basic improvements
+                                # Basic title structure optimization - ALWAYS apply
+                                words = product_title.split()
+                                if len(words) > 6:  # Title too long - restructure
+                                    # Move key words to front
+                                    key_words = []
+                                    remaining_words = []
+                                    
+                                    for word in words:
+                                        if word.lower() in ['oak', 'furniture', 'sofa', 'chair', 'table', 'bed', 'dining', 'living', 'office', 'fabric', 'leather', 'wood']:
+                                            key_words.append(word)
                                         else:
-                                            # Fallback - basic title structure optimization
-                                            words = product_title.split()
-                                            if len(words) > 8:  # Title too long
-                                                # Move key words to front
-                                                key_words = []
-                                                remaining_words = []
-                                                
-                                                for word in words:
-                                                    if word.lower() in ['oak', 'furniture', 'sofa', 'chair', 'table', 'bed', 'dining', 'living', 'office']:
-                                                        key_words.append(word)
-                                                    else:
-                                                        remaining_words.append(word)
-                                                
-                                                if key_words:
-                                                    optimized_title = f"{' '.join(key_words)} | {' '.join(remaining_words)}"
-                                                    title_reasoning = f"AI optimization: Restructured title to prioritize key furniture terms - improved readability and SEO"
-                                                    priority_score += 15
-                                                    expected_impact = "LOW"
-                                            
-                                            # Basic description enhancement
-                                            if len(product_desc) < 100:  # Description too short
-                                                optimized_desc = f"{product_desc} Quality furniture from Oak Furnitureland - Free delivery and expert customer service."
-                                                description_reasoning = f"AI optimization: Enhanced short description with trust signals and brand mention"
-                                                priority_score += 10
-                                                expected_impact = "LOW"
-                                    except KeyError:
-                                        # search_volume column doesn't exist, use basic optimization
-                                        words = product_title.split()
-                                        if len(words) > 8:  # Title too long
-                                            # Move key words to front
-                                            key_words = []
-                                            remaining_words = []
-                                            
-                                            for word in words:
-                                                if word.lower() in ['oak', 'furniture', 'sofa', 'chair', 'table', 'bed', 'dining', 'living', 'office']:
-                                                    key_words.append(word)
-                                                else:
-                                                    remaining_words.append(word)
-                                            
-                                            if key_words:
-                                                optimized_title = f"{' '.join(key_words)} | {' '.join(remaining_words)}"
-                                                title_reasoning = f"AI optimization: Restructured title to prioritize key furniture terms - improved readability and SEO"
-                                                priority_score += 15
-                                                expected_impact = "LOW"
-                                        
-                                        # Basic description enhancement
-                                        if len(product_desc) < 100:  # Description too short
-                                            optimized_desc = f"{product_desc} Quality furniture from Oak Furnitureland - Free delivery and expert customer service."
-                                            description_reasoning = f"AI optimization: Enhanced short description with trust signals and brand mention"
-                                            priority_score += 10
-                                            expected_impact = "LOW"
+                                            remaining_words.append(word)
+                                    
+                                    if key_words:
+                                        optimized_title = f"{' '.join(key_words)} | {' '.join(remaining_words)}"
+                                        title_reasoning = f"AI optimization: Restructured title to prioritize key furniture terms - improved readability and SEO"
+                                        priority_score += 20
+                                        expected_impact = "MEDIUM"
+                                elif len(words) <= 4:  # Title too short - enhance
+                                    # Add furniture context
+                                    optimized_title = f"{product_title} | Quality Furniture"
+                                    title_reasoning = f"AI optimization: Enhanced short title with furniture context"
+                                    priority_score += 15
+                                    expected_impact = "MEDIUM"
                                 else:
-                                    # No SEOMonitor data - basic optimization
-                                    title_reasoning = "AI optimization: No SEOMonitor data available - basic title structure optimization"
+                                    # Add brand for authority
+                                    optimized_title = f"{product_title} | Oak Furnitureland"
+                                    title_reasoning = f"AI optimization: Added brand authority to title"
+                                    priority_score += 10
+                                    expected_impact = "LOW"
+                                
+                                # ALWAYS enhance description
+                                if len(product_desc) < 150:  # Description too short
+                                    optimized_desc = f"{product_desc} Premium quality furniture from Oak Furnitureland. Free delivery and expert customer service. Perfect for modern homes."
+                                    description_reasoning = f"AI optimization: Enhanced short description with trust signals and brand mention"
+                                    priority_score += 15
+                                    expected_impact = "MEDIUM"
+                                else:
+                                    # Add call to action
+                                    optimized_desc = f"{product_desc} Free delivery and expert customer service from Oak Furnitureland."
+                                    description_reasoning = f"AI optimization: Added call to action to description"
+                                    priority_score += 10
                                     expected_impact = "LOW"
                         
                         # 5. Add competitor analysis using SEOMonitor data
@@ -982,8 +1080,53 @@ elif page == "Strategic Optimization":
                                 if not competitor_keywords.empty:
                                     competitor_insights = f" | Competitor opportunity: {competitor_keywords.iloc[0]['keyword']} ({competitor_keywords.iloc[0]['search_volume']:,} searches)"
                                     priority_score += 20
+                                
+                                # Add product grid competitor analysis
+                                product_grid_competitors = df_seo[
+                                    (df_seo['search_volume'] > 500) & 
+                                    (df_seo['product_grid_position'] <= 5) &
+                                    (df_seo['position'] > 10) &
+                                    (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture']), case=False, na=False))
+                                ]
+                                
+                                if not product_grid_competitors.empty:
+                                    competitor_insights += f" | Product grid competitor: '{product_grid_competitors.iloc[0]['keyword']}' ranks #{product_grid_competitors.iloc[0]['product_grid_position']} in shopping but #{product_grid_competitors.iloc[0]['position']} organic"
+                                    priority_score += 25
+                                
+                                # Add current ranking insights
+                                current_rankings = []
+                                for kw in relevant_keywords[:3]:  # Top 3 relevant keywords
+                                    if kw['position'] <= 20:
+                                        current_rankings.append(f"'{kw['keyword']}' ranks #{kw['position']} ({kw['search_volume']:,} searches)")
+                                    if kw['product_grid_position'] <= 10:
+                                        current_rankings.append(f"'{kw['keyword']}' ranks #{kw['product_grid_position']} in shopping")
+                                
+                                if current_rankings:
+                                    competitor_insights += f" | Current rankings: {', '.join(current_rankings[:2])}"
+                                    priority_score += 15
+                                    
                             except KeyError:
                                 # search_volume column doesn't exist, skip competitor analysis
+                                pass
+                        
+                        # 7. Add keyword gap analysis
+                        keyword_gaps = ""
+                        if df_seo is not None and relevant_keywords:
+                            try:
+                                # Find high-volume keywords competitors rank for but we don't
+                                all_high_volume = df_seo[
+                                    (df_seo['search_volume'] > 1000) & 
+                                    (df_seo['position'] > 50) &
+                                    (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture', 'oak', 'dining', 'bedroom']), case=False, na=False))
+                                ].sort_values('search_volume', ascending=False)
+                                
+                                if not all_high_volume.empty:
+                                    gap_keyword = all_high_volume.iloc[0]['keyword']
+                                    gap_volume = all_high_volume.iloc[0]['search_volume']
+                                    keyword_gaps = f" | Keyword gap: '{gap_keyword}' ({gap_volume:,} searches) - competitors rank but we don't"
+                                    priority_score += 30
+                                    
+                            except KeyError:
                                 pass
                         
                         # 6. Add Sitebulb insights if available
@@ -1009,6 +1152,26 @@ elif page == "Strategic Optimization":
                                         description_reasoning += " | Description too long"
                                         priority_score += 5
                         
+                        # Calculate performance prediction
+                        predicted_traffic_increase = 0
+                        predicted_ranking_improvement = 0
+                        
+                        if relevant_keywords:
+                            # Estimate traffic increase based on search volume and current position
+                            for kw in relevant_keywords[:3]:  # Top 3 keywords
+                                if kw['position'] > 10:  # Room for improvement
+                                    # Estimate CTR improvement (position 20+ to top 10)
+                                    if kw['position'] > 20:
+                                        predicted_traffic_increase += kw['search_volume'] * 0.05  # 5% CTR improvement
+                                    elif kw['position'] > 10:
+                                        predicted_traffic_increase += kw['search_volume'] * 0.02  # 2% CTR improvement
+                                    
+                                    # Estimate ranking improvement
+                                    if kw['position'] > 20:
+                                        predicted_ranking_improvement += 10  # Move to top 10
+                                    elif kw['position'] > 10:
+                                        predicted_ranking_improvement += 5   # Move to top 5
+                        
                         # Store recommendation
                         recommendations.append({
                             'product_id': product_id,
@@ -1018,8 +1181,10 @@ elif page == "Strategic Optimization":
                             'optimized_description': optimized_desc,
                             'priority_score': priority_score,
                             'expected_impact': expected_impact,
-                            'title_reasoning': title_reasoning + competitor_insights,
-                            'description_reasoning': description_reasoning
+                            'title_reasoning': title_reasoning + competitor_insights + keyword_gaps,
+                            'description_reasoning': description_reasoning,
+                            'predicted_traffic_increase': int(predicted_traffic_increase),
+                            'predicted_ranking_improvement': predicted_ranking_improvement
                         })
                     
                     # Store recommendations
@@ -1093,6 +1258,49 @@ elif page == "Strategic Optimization":
                                 st.warning("⚠️ SEOMonitor data doesn't have 'search_volume' column. Available columns:")
                                 st.write(list(df_seo.columns))
                                 st.info("💡 The optimization logic will use AI fallback instead of search volume data.")
+                                
+                                # Show sample data structure for debugging
+                                st.subheader("🔍 Sample SEOMonitor Data Structure")
+                                sample_row = df_seo.iloc[0]
+                                st.write("**Sample keyword data:**")
+                                for key, value in sample_row.items():
+                                    if isinstance(value, (dict, list)) and len(str(value)) > 100:
+                                        st.write(f"- **{key}**: {str(value)[:100]}...")
+                                    else:
+                                        st.write(f"- **{key}**: {value}")
+                                
+                                # Show data extraction results
+                                st.subheader("🔍 Data Extraction Test")
+                                test_keywords = []
+                                for _, row in df_seo.head(5).iterrows():
+                                    keyword = row.get('keyword', '')
+                                    search_volume = 0
+                                    position = 999
+                                    difficulty = 0
+                                    
+                                    # Test extraction methods
+                                    try:
+                                        search_data = row.get('search_data', {})
+                                        if isinstance(search_data, dict):
+                                            search_volume = search_data.get('search_volume', 0)
+                                    except:
+                                        pass
+                                    
+                                    try:
+                                        ranking_data = row.get('ranking_data', {})
+                                        if isinstance(ranking_data, dict):
+                                            position = ranking_data.get('desktop', {}).get('rank', 999)
+                                    except:
+                                        pass
+                                    
+                                    test_keywords.append({
+                                        'keyword': keyword,
+                                        'search_volume': search_volume,
+                                        'position': position,
+                                        'difficulty': difficulty
+                                    })
+                                
+                                st.dataframe(pd.DataFrame(test_keywords))
                         
                         # Show sample of what was found
                         sample_recs = [r for r in recommendations if r['title_reasoning'] not in ["No optimization needed", "No relevant keywords with search volume found"]][:3]
@@ -1122,6 +1330,225 @@ elif page == "Strategic Optimization":
                                 st.write("---")
             else:
                 st.error("❌ SEOMonitor data required for AI optimization.")
+
+elif page == "Quick Wins":
+    st.header("⚡ Quick Wins Analysis")
+    
+    if st.session_state['gmc_feed'] is None:
+        st.warning("⚠️ Please upload GMC feed data first.")
+    else:
+        df_seo = st.session_state.get('seomonitor_data')
+        
+        if df_seo is not None:
+            st.success(f"✅ Analyzing {len(df_seo)} keywords for quick wins...")
+            
+            try:
+                # Find easy win opportunities
+                easy_wins = df_seo[
+                    (df_seo['search_volume'] > 300) & 
+                    (df_seo['search_volume'] < 2000) & 
+                    (df_seo['position'] > 30) &
+                    (df_seo['difficulty'] < 40) &
+                    (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture', 'oak', 'dining', 'bedroom']), case=False, na=False))
+                ].sort_values('search_volume', ascending=False)
+                
+                if not easy_wins.empty:
+                    st.subheader("🎯 Top 20 Easy Win Opportunities")
+                    st.info("💡 **Easy Wins**: Low difficulty, good search volume, poor current ranking - perfect for quick improvements!")
+                    
+                    # Show top 20 easy wins
+                    easy_wins_display = easy_wins.head(20)[['keyword', 'search_volume', 'position', 'difficulty']].copy()
+                    easy_wins_display['Potential Traffic'] = easy_wins_display['search_volume'] * 0.05  # 5% CTR estimate
+                    easy_wins_display['Difficulty Level'] = easy_wins_display['difficulty'].apply(lambda x: 'Easy' if x < 20 else 'Medium' if x < 40 else 'Hard')
+                    
+                    st.dataframe(easy_wins_display, use_container_width=True)
+                    
+                    # Quick win recommendations
+                    st.subheader("🚀 Quick Win Recommendations")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write("**Title Optimization Strategy:**")
+                        for i, (_, row) in enumerate(easy_wins.head(5).iterrows()):
+                            st.write(f"{i+1}. Add '{row['keyword']}' to titles ({row['search_volume']:,} searches, difficulty {row['difficulty']})")
+                    
+                    with col2:
+                        st.write("**Description Enhancement:**")
+                        for i, (_, row) in enumerate(easy_wins.head(5).iterrows()):
+                            st.write(f"{i+1}. Include '{row['keyword']}' in descriptions for better relevance")
+                    
+                    # Export easy wins
+                    csv_easy_wins = easy_wins_display.to_csv(index=False)
+                    st.download_button(
+                        label="⬇️ Download Easy Wins CSV",
+                        data=csv_easy_wins,
+                        file_name="easy_wins_opportunities.csv",
+                        mime="text/csv"
+                    )
+                    
+                else:
+                    st.warning("⚠️ No easy win opportunities found. Try lowering the difficulty threshold.")
+                
+                # Product grid opportunities
+                st.markdown("---")
+                st.subheader("🛒 Product Grid Opportunities")
+                
+                try:
+                    product_grid_ops = df_seo[
+                        (df_seo['search_volume'] > 200) & 
+                        (df_seo['product_grid_position'] > 10) &
+                        (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture', 'oak', 'dining', 'bedroom']), case=False, na=False))
+                    ].sort_values('search_volume', ascending=False)
+                    
+                    if not product_grid_ops.empty:
+                        st.info("💡 **Product Grid Opportunities**: Keywords with good volume but poor shopping visibility - optimize for Google Shopping!")
+                        
+                        grid_display = product_grid_ops.head(15)[['keyword', 'search_volume', 'product_grid_position']].copy()
+                        grid_display['Shopping Opportunity'] = grid_display['product_grid_position'].apply(lambda x: 'High' if x > 20 else 'Medium' if x > 10 else 'Low')
+                        
+                        st.dataframe(grid_display, use_container_width=True)
+                        
+                        # Export product grid opportunities
+                        csv_grid_ops = grid_display.to_csv(index=False)
+                        st.download_button(
+                            label="⬇️ Download Product Grid Opportunities CSV",
+                            data=csv_grid_ops,
+                            file_name="product_grid_opportunities.csv",
+                            mime="text/csv"
+                        )
+                    else:
+                        st.warning("⚠️ No product grid opportunities found.")
+                        
+                except KeyError:
+                    st.warning("⚠️ Product grid data not available in SEOMonitor response.")
+                
+            except KeyError:
+                st.error("❌ Search volume data not available. Please check SEOMonitor data extraction.")
+        else:
+            st.warning("⚠️ Please fetch SEOMonitor data first.")
+
+elif page == "Optimization Summary":
+    st.header("📋 Optimization Summary")
+    
+    if st.session_state['gmc_feed'] is None:
+        st.warning("⚠️ Please upload GMC feed data first.")
+    else:
+        recommendations = st.session_state.get('optimization_recommendations', [])
+        
+        if recommendations:
+            st.success(f"✅ {len(recommendations)} products optimized!")
+            
+            # Create simple summary DataFrame
+            summary_data = []
+            for rec in recommendations:
+                summary_data.append({
+                    'Product ID': rec['product_id'],
+                    'Original Title': rec['current_title'],
+                    'Optimized Title': rec['optimized_title'],
+                    'Title Reasoning': rec['title_reasoning'],
+                    'Original Description': rec['current_description'],
+                    'Optimized Description': rec['optimized_description'],
+                    'Description Reasoning': rec['description_reasoning'],
+                    'Impact': rec['expected_impact'],
+                    'Priority Score': rec['priority_score'],
+                    'Predicted Traffic Increase': rec.get('predicted_traffic_increase', 0),
+                    'Predicted Ranking Improvement': rec.get('predicted_ranking_improvement', 0)
+                })
+            
+            df_summary = pd.DataFrame(summary_data)
+            
+            # Show summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total Products", len(df_summary))
+            with col2:
+                high_impact = len(df_summary[df_summary['Impact'] == 'HIGH'])
+                st.metric("High Impact", high_impact)
+            with col3:
+                medium_impact = len(df_summary[df_summary['Impact'] == 'MEDIUM'])
+                st.metric("Medium Impact", medium_impact)
+            with col4:
+                low_impact = len(df_summary[df_summary['Impact'] == 'LOW'])
+                st.metric("Low Impact", low_impact)
+            
+            # ROI Calculator
+            st.markdown("---")
+            st.subheader("💰 ROI Calculator")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                avg_conversion_rate = st.number_input("Average Conversion Rate (%)", value=2.0, min_value=0.1, max_value=10.0, step=0.1)
+            with col2:
+                avg_order_value = st.number_input("Average Order Value (£)", value=500.0, min_value=50.0, max_value=2000.0, step=50.0)
+            with col3:
+                profit_margin = st.number_input("Profit Margin (%)", value=30.0, min_value=5.0, max_value=80.0, step=5.0)
+            
+            # Calculate ROI
+            total_predicted_traffic = df_summary['Predicted Traffic Increase'].sum()
+            predicted_revenue = total_predicted_traffic * (avg_conversion_rate / 100) * avg_order_value
+            predicted_profit = predicted_revenue * (profit_margin / 100)
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Predicted Monthly Traffic", f"{total_predicted_traffic:,.0f}")
+            with col2:
+                st.metric("Predicted Monthly Revenue", f"£{predicted_revenue:,.0f}")
+            with col3:
+                st.metric("Predicted Monthly Profit", f"£{predicted_profit:,.0f}")
+            with col4:
+                st.metric("Annual Profit Potential", f"£{predicted_profit * 12:,.0f}")
+            
+            st.info(f"💡 **ROI Analysis**: These optimizations could generate £{predicted_profit * 12:,.0f} additional annual profit from improved search rankings.")
+            
+            st.markdown("---")
+            
+            # Filter options
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                impact_filter = st.selectbox("Filter by Impact", ["All", "HIGH", "MEDIUM", "LOW"])
+            with col2:
+                min_score = st.slider("Minimum Priority Score", 0, 100, 0)
+            with col3:
+                show_changes_only = st.checkbox("Show changes only", value=True)
+            
+            # Apply filters
+            filtered_df = df_summary.copy()
+            
+            if impact_filter != "All":
+                filtered_df = filtered_df[filtered_df['Impact'] == impact_filter]
+            
+            filtered_df = filtered_df[filtered_df['Priority Score'] >= min_score]
+            
+            if show_changes_only:
+                # Only show products where title or description actually changed
+                filtered_df = filtered_df[
+                    (filtered_df['Original Title'] != filtered_df['Optimized Title']) |
+                    (filtered_df['Original Description'] != filtered_df['Optimized Description'])
+                ]
+            
+            st.subheader(f"📊 Filtered Results ({len(filtered_df)} products)")
+            
+            # Display the summary table
+            st.dataframe(
+                filtered_df,
+                use_container_width=True,
+                height=600
+            )
+            
+            # Download options
+            st.markdown("---")
+            st.subheader("📥 Download Summary")
+            
+            csv_summary = filtered_df.to_csv(index=False)
+            st.download_button(
+                label="⬇️ Download Summary CSV",
+                data=csv_summary,
+                file_name=f"optimization_summary_{st.session_state.get('gmc_file', 'gmc_feed')}.csv",
+                mime="text/csv"
+            )
+            
+        else:
+            st.warning("⚠️ No optimizations found. Please run 'Strategic Optimization' first.")
 
 elif page == "Export Optimized Feed":
     st.header("📤 Export Optimized GMC Feed")
