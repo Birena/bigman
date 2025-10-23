@@ -277,7 +277,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 2.5 - ERROR HANDLING & FIELD DETECTION")
+st.caption("Version 2.6 - COMPLETE ERROR HANDLING FIX")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -889,29 +889,56 @@ elif page == "Strategic Optimization":
                                 # Fallback - use search volume data strategically even without direct relevance
                                 # Look for high-volume furniture keywords that could be relevant
                                 if df_seo is not None:
-                                    # Get high-volume furniture keywords
-                                    high_volume_furniture = df_seo[
-                                        (df_seo['search_volume'] > 500) & 
-                                        (df_seo['search_volume'] < 5000) &  # Not too competitive
-                                        (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture', 'oak']), case=False, na=False))
-                                    ].sort_values('search_volume', ascending=False)
-                                    
-                                    if not high_volume_furniture.empty:
-                                        # Use the highest volume relevant keyword
-                                        best_keyword = high_volume_furniture.iloc[0]['keyword']
-                                        search_volume = high_volume_furniture.iloc[0]['search_volume']
+                                    try:
+                                        # Get high-volume furniture keywords
+                                        high_volume_furniture = df_seo[
+                                            (df_seo['search_volume'] > 500) & 
+                                            (df_seo['search_volume'] < 5000) &  # Not too competitive
+                                            (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture', 'oak']), case=False, na=False))
+                                        ].sort_values('search_volume', ascending=False)
                                         
-                                        optimized_title = f"{best_keyword.title()} | {product_title}"
-                                        title_reasoning = f"AI optimization: Added high-volume keyword '{best_keyword}' ({search_volume:,} searches) - strategic opportunity"
-                                        priority_score += 30
-                                        expected_impact = "MEDIUM"
-                                        
-                                        # Enhanced description
-                                        optimized_desc = f"{product_desc} {best_keyword.title()} from Oak Furnitureland - Quality furniture with free delivery."
-                                        description_reasoning = f"AI optimization: Enhanced with high-volume keyword '{best_keyword}' for better search visibility"
-                                        priority_score += 15
-                                    else:
-                                        # Fallback - basic title structure optimization
+                                        if not high_volume_furniture.empty:
+                                            # Use the highest volume relevant keyword
+                                            best_keyword = high_volume_furniture.iloc[0]['keyword']
+                                            search_volume = high_volume_furniture.iloc[0]['search_volume']
+                                            
+                                            optimized_title = f"{best_keyword.title()} | {product_title}"
+                                            title_reasoning = f"AI optimization: Added high-volume keyword '{best_keyword}' ({search_volume:,} searches) - strategic opportunity"
+                                            priority_score += 30
+                                            expected_impact = "MEDIUM"
+                                            
+                                            # Enhanced description
+                                            optimized_desc = f"{product_desc} {best_keyword.title()} from Oak Furnitureland - Quality furniture with free delivery."
+                                            description_reasoning = f"AI optimization: Enhanced with high-volume keyword '{best_keyword}' for better search visibility"
+                                            priority_score += 15
+                                        else:
+                                            # Fallback - basic title structure optimization
+                                            words = product_title.split()
+                                            if len(words) > 8:  # Title too long
+                                                # Move key words to front
+                                                key_words = []
+                                                remaining_words = []
+                                                
+                                                for word in words:
+                                                    if word.lower() in ['oak', 'furniture', 'sofa', 'chair', 'table', 'bed', 'dining', 'living', 'office']:
+                                                        key_words.append(word)
+                                                    else:
+                                                        remaining_words.append(word)
+                                                
+                                                if key_words:
+                                                    optimized_title = f"{' '.join(key_words)} | {' '.join(remaining_words)}"
+                                                    title_reasoning = f"AI optimization: Restructured title to prioritize key furniture terms - improved readability and SEO"
+                                                    priority_score += 15
+                                                    expected_impact = "LOW"
+                                            
+                                            # Basic description enhancement
+                                            if len(product_desc) < 100:  # Description too short
+                                                optimized_desc = f"{product_desc} Quality furniture from Oak Furnitureland - Free delivery and expert customer service."
+                                                description_reasoning = f"AI optimization: Enhanced short description with trust signals and brand mention"
+                                                priority_score += 10
+                                                expected_impact = "LOW"
+                                    except KeyError:
+                                        # search_volume column doesn't exist, use basic optimization
                                         words = product_title.split()
                                         if len(words) > 8:  # Title too long
                                             # Move key words to front
