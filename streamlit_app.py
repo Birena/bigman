@@ -277,7 +277,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 2.4 - PROFESSIONAL UI & ADVANCED OPTIMIZATION")
+st.caption("Version 2.5 - ERROR HANDLING & FIELD DETECTION")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -944,16 +944,20 @@ elif page == "Strategic Optimization":
                         # 5. Add competitor analysis using SEOMonitor data
                         competitor_insights = ""
                         if df_seo is not None:
-                            # Find keywords where competitors might be ranking better
-                            competitor_keywords = df_seo[
-                                (df_seo['search_volume'] > 1000) & 
-                                (df_seo['position'] > 20) &
-                                (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture']), case=False, na=False))
-                            ]
-                            
-                            if not competitor_keywords.empty:
-                                competitor_insights = f" | Competitor opportunity: {competitor_keywords.iloc[0]['keyword']} ({competitor_keywords.iloc[0]['search_volume']:,} searches)"
-                                priority_score += 20
+                            try:
+                                # Find keywords where competitors might be ranking better
+                                competitor_keywords = df_seo[
+                                    (df_seo['search_volume'] > 1000) & 
+                                    (df_seo['position'] > 20) &
+                                    (df_seo['keyword'].str.contains('|'.join(['sofa', 'chair', 'table', 'furniture']), case=False, na=False))
+                                ]
+                                
+                                if not competitor_keywords.empty:
+                                    competitor_insights = f" | Competitor opportunity: {competitor_keywords.iloc[0]['keyword']} ({competitor_keywords.iloc[0]['search_volume']:,} searches)"
+                                    priority_score += 20
+                            except KeyError:
+                                # search_volume column doesn't exist, skip competitor analysis
+                                pass
                         
                         # 6. Add Sitebulb insights if available
                         if df_sitebulb is not None:
@@ -1025,38 +1029,43 @@ elif page == "Strategic Optimization":
                         # Show search volume data availability
                         if df_seo is not None:
                             st.subheader("📊 SEOMonitor Search Volume Analysis")
-                            total_keywords = len(df_seo)
-                            keywords_with_volume = len(df_seo[df_seo['search_volume'] > 0])
-                            avg_search_volume = df_seo['search_volume'].mean()
-                            max_search_volume = df_seo['search_volume'].max()
-                            
-                            col1, col2, col3, col4 = st.columns(4)
-                            with col1:
-                                st.metric("Total Keywords", total_keywords)
-                            with col2:
-                                st.metric("Keywords with Volume", keywords_with_volume)
-                            with col3:
-                                st.metric("Avg Search Volume", f"{avg_search_volume:.0f}")
-                            with col4:
-                                st.metric("Max Search Volume", max_search_volume)
-                            
-                            # Show sample of high-volume keywords
-                            high_volume_keywords = df_seo[df_seo['search_volume'] > 1000].head(10)
-                            if not high_volume_keywords.empty:
-                                st.write("**High Volume Keywords (>1000 searches):**")
-                                st.dataframe(high_volume_keywords[['keyword', 'search_volume', 'position']])
-                            
-                            # Show easy win opportunities
-                            easy_wins = df_seo[
-                                (df_seo['search_volume'] > 300) & 
-                                (df_seo['search_volume'] < 2000) & 
-                                (df_seo['position'] > 30) &
-                                (df_seo['difficulty'] < 40)
-                            ].sort_values('search_volume', ascending=False).head(5)
-                            
-                            if not easy_wins.empty:
-                                st.write("**Easy Win Opportunities (low difficulty, good volume):**")
-                                st.dataframe(easy_wins[['keyword', 'search_volume', 'position', 'difficulty']])
+                            try:
+                                total_keywords = len(df_seo)
+                                keywords_with_volume = len(df_seo[df_seo['search_volume'] > 0])
+                                avg_search_volume = df_seo['search_volume'].mean()
+                                max_search_volume = df_seo['search_volume'].max()
+                                
+                                col1, col2, col3, col4 = st.columns(4)
+                                with col1:
+                                    st.metric("Total Keywords", total_keywords)
+                                with col2:
+                                    st.metric("Keywords with Volume", keywords_with_volume)
+                                with col3:
+                                    st.metric("Avg Search Volume", f"{avg_search_volume:.0f}")
+                                with col4:
+                                    st.metric("Max Search Volume", max_search_volume)
+                                
+                                # Show sample of high-volume keywords
+                                high_volume_keywords = df_seo[df_seo['search_volume'] > 1000].head(10)
+                                if not high_volume_keywords.empty:
+                                    st.write("**High Volume Keywords (>1000 searches):**")
+                                    st.dataframe(high_volume_keywords[['keyword', 'search_volume', 'position']])
+                                
+                                # Show easy win opportunities
+                                easy_wins = df_seo[
+                                    (df_seo['search_volume'] > 300) & 
+                                    (df_seo['search_volume'] < 2000) & 
+                                    (df_seo['position'] > 30) &
+                                    (df_seo['difficulty'] < 40)
+                                ].sort_values('search_volume', ascending=False).head(5)
+                                
+                                if not easy_wins.empty:
+                                    st.write("**Easy Win Opportunities (low difficulty, good volume):**")
+                                    st.dataframe(easy_wins[['keyword', 'search_volume', 'position', 'difficulty']])
+                            except KeyError:
+                                st.warning("⚠️ SEOMonitor data doesn't have 'search_volume' column. Available columns:")
+                                st.write(list(df_seo.columns))
+                                st.info("💡 The optimization logic will use AI fallback instead of search volume data.")
                         
                         # Show sample of what was found
                         sample_recs = [r for r in recommendations if r['title_reasoning'] not in ["No optimization needed", "No relevant keywords with search volume found"]][:3]
