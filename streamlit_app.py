@@ -277,7 +277,7 @@ if st.session_state['authenticated']:
 
 st.title("🛒 Oak Furniture Land GMC Feed Optimizer")
 st.subheader("Strategic product feed optimization using search volume + PPC intelligence")
-st.caption("Version 3.2 - FIXED TYPEERROR")
+st.caption("Version 3.4 - TABBED OPTIMIZATION SUMMARY")
 
 # Initialize session state with persistence
 if 'sitebulb_data' not in st.session_state:
@@ -781,14 +781,14 @@ elif page == "Strategic Optimization":
                                 # Focus on low-difficulty, high-volume opportunities first
                                 best_easy_win = easy_wins[0]
                                 optimized_title = f"{best_easy_win['keyword'].title()} | {product_title}"
-                                title_reasoning = f"EASY WIN: Target '{best_easy_win['keyword']}' ({best_easy_win['search_volume']:,} searches, difficulty {best_easy_win['difficulty']}) - low competition opportunity"
+                                title_reasoning = f"EASY WIN: Target '{best_easy_win['keyword']}' - SEOMonitor data shows {best_easy_win['search_volume']:,} monthly searches, difficulty {best_easy_win['difficulty']}/100, currently ranking #{best_easy_win['position']} (huge opportunity to move to top 10)"
                                 priority_score += 70
                                 
                             elif product_grid_opportunities:
                                 # Focus on product grid opportunities (Shopping results)
                                 best_grid_opportunity = product_grid_opportunities[0]
                                 optimized_title = f"{best_grid_opportunity['keyword'].title()} | {product_title}"
-                                title_reasoning = f"PRODUCT GRID OPPORTUNITY: Target '{best_grid_opportunity['keyword']}' ({best_grid_opportunity['search_volume']:,} searches, shopping position #{best_grid_opportunity['product_grid_position']}) - optimize for product visibility"
+                                title_reasoning = f"PRODUCT GRID OPPORTUNITY: Target '{best_grid_opportunity['keyword']}' - SEOMonitor shows {best_grid_opportunity['search_volume']:,} monthly searches but only ranking #{best_grid_opportunity['product_grid_position']} in Google Shopping (organic #{best_grid_opportunity['position']}) - optimize for shopping visibility"
                                 priority_score += 65
                                 
                             elif product_grid_winners:
@@ -796,7 +796,7 @@ elif page == "Strategic Optimization":
                                 best_grid_winner = product_grid_winners[0]
                                 if best_grid_winner['keyword'].lower() not in product_title.lower():
                                     optimized_title = f"{best_grid_winner['keyword'].title()} | {product_title}"
-                                    title_reasoning = f"PRODUCT GRID WINNER: Reinforce '{best_grid_winner['keyword']}' ({best_grid_winner['search_volume']:,} searches, shopping position #{best_grid_winner['product_grid_position']}) - maintain shopping visibility"
+                                    title_reasoning = f"PRODUCT GRID WINNER: Reinforce '{best_grid_winner['keyword']}' - SEOMonitor data shows {best_grid_winner['search_volume']:,} monthly searches, ranking #1-#{best_grid_winner['product_grid_position']} in Google Shopping (maintain this strong position)"
                                     priority_score += 60
                                 
                             elif top_performers:
@@ -807,7 +807,7 @@ elif page == "Strategic Optimization":
                                 if best_performer['keyword'].lower() not in product_title.lower():
                                     # Move successful keyword to front of title
                                     optimized_title = f"{best_performer['keyword'].title()} {product_title}"
-                                    title_reasoning = f"Move high-performing keyword '{best_performer['keyword']}' to front (ranks #{best_performer['position']}, {best_performer['search_volume']:,} searches) - proven to work"
+                                    title_reasoning = f"TOP PERFORMER: Move '{best_performer['keyword']}' to front - SEOMonitor shows {best_performer['search_volume']:,} monthly searches, currently ranking #{best_performer['position']} (proven winner, move to front for better visibility)"
                                     priority_score += 40
                                 else:
                                     # Keyword is in title but not prominent - restructure
@@ -821,7 +821,7 @@ elif page == "Strategic Optimization":
                                             keyword_part = ' '.join([w for w in words if w.lower() in keyword_words])
                                             remaining_words = [w for w in words if w.lower() not in keyword_words]
                                             optimized_title = f"{keyword_part.title()} {' '.join(remaining_words)}"
-                                            title_reasoning = f"Restructure title to prioritize '{best_performer['keyword']}' (ranks #{best_performer['position']}) - move to front for better visibility"
+                                            title_reasoning = f"RESTRUCTURE WINNER: Move '{best_performer['keyword']}' to front - SEOMonitor data shows {best_performer['search_volume']:,} monthly searches, ranking #{best_performer['position']} (already successful, optimize placement)"
                                             priority_score += 35
                                             break
                                     
@@ -839,19 +839,19 @@ elif page == "Strategic Optimization":
                                     keyword_part = ' '.join([w for w in words if w.lower() in keyword_words])
                                     remaining_words = [w for w in words if w.lower() not in keyword_words]
                                     optimized_title = f"{keyword_part.title()} {' '.join(remaining_words)}"
-                                    title_reasoning = f"Move '{best_opportunity['keyword']}' to front - currently ranks #{best_opportunity['position']} but has {best_opportunity['search_volume']:,} searches (high potential)"
+                                    title_reasoning = f"IMPROVE POOR PERFORMER: Move '{best_opportunity['keyword']}' to front - SEOMonitor shows {best_opportunity['search_volume']:,} monthly searches but only ranking #{best_opportunity['position']} (high volume, poor ranking = big opportunity)"
                                     priority_score += 45
                                 else:
                                     # Add missing high-volume keyword
                                     optimized_title = f"{best_opportunity['keyword'].title()} {product_title}"
-                                    title_reasoning = f"Add high-volume keyword '{best_opportunity['keyword']}' ({best_opportunity['search_volume']:,} searches) - currently ranking #{best_opportunity['position']} but can improve"
+                                    title_reasoning = f"HIGH-VOLUME OPPORTUNITY: Add '{best_opportunity['keyword']}' - SEOMonitor data shows {best_opportunity['search_volume']:,} monthly searches, currently ranking #{best_opportunity['position']} (add this high-volume keyword)"
                                     priority_score += 50
                                     
                             elif missing_opportunities:
                                 # Target completely missing high-volume keywords
                                 best_missing = missing_opportunities[0]
                                 optimized_title = f"{best_missing['keyword'].title()} {product_title}"
-                                title_reasoning = f"Target missing high-volume keyword '{best_missing['keyword']}' ({best_missing['search_volume']:,} searches) - not currently ranking, big opportunity"
+                                title_reasoning = f"MISSING OPPORTUNITY: Target '{best_missing['keyword']}' - SEOMonitor shows {best_missing['search_volume']:,} monthly searches, ranking #{best_missing['position']} (not ranking well for high-volume keyword)"
                                 priority_score += 60
                             
                             # DESCRIPTION OPTIMIZATION - Based on successful patterns
@@ -1467,19 +1467,23 @@ elif page == "Optimization Summary":
             
             df_summary = pd.DataFrame(summary_data)
             
-            # Show summary metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Products", len(df_summary))
-            with col2:
-                high_impact = len(df_summary[df_summary['Impact'] == 'HIGH'])
-                st.metric("High Impact", high_impact)
-            with col3:
-                medium_impact = len(df_summary[df_summary['Impact'] == 'MEDIUM'])
-                st.metric("Medium Impact", medium_impact)
-            with col4:
-                low_impact = len(df_summary[df_summary['Impact'] == 'LOW'])
-                st.metric("Low Impact", low_impact)
+            # Create tabs
+            tab1, tab2 = st.tabs(["📊 Full Analysis", "🎯 Quick Review"])
+            
+            with tab1:
+                # Show summary metrics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Products", len(df_summary))
+                with col2:
+                    high_impact = len(df_summary[df_summary['Impact'] == 'HIGH'])
+                    st.metric("High Impact", high_impact)
+                with col3:
+                    medium_impact = len(df_summary[df_summary['Impact'] == 'MEDIUM'])
+                    st.metric("Medium Impact", medium_impact)
+                with col4:
+                    low_impact = len(df_summary[df_summary['Impact'] == 'LOW'])
+                    st.metric("Low Impact", low_impact)
             
             # ROI Calculator
             st.markdown("---")
@@ -1556,6 +1560,67 @@ elif page == "Optimization Summary":
                 file_name=f"optimization_summary_{st.session_state.get('gmc_file', 'gmc_feed')}.csv",
                 mime="text/csv"
             )
+            
+            with tab2:
+                st.subheader("🎯 Quick Review - Key Changes Only")
+                
+                # Create simplified view with just the essential columns
+                quick_data = []
+                for rec in recommendations:
+                    # Only include products that actually changed
+                    if (rec['current_title'] != rec['optimized_title']) or (rec['current_description'] != rec['optimized_description']):
+                        quick_data.append({
+                            'Original Title': rec['current_title'],
+                            'Optimized Title': rec['optimized_title'],
+                            'Title Reasoning': rec['title_reasoning'],
+                            'Original Description': rec['current_description'],
+                            'Optimized Description': rec['optimized_description'],
+                            'Description Reasoning': rec['description_reasoning'],
+                            'Impact': rec['expected_impact']
+                        })
+                
+                if quick_data:
+                    df_quick = pd.DataFrame(quick_data)
+                    
+                    # Show metrics for changes only
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Products Changed", len(df_quick))
+                    with col2:
+                        high_impact_changes = len(df_quick[df_quick['Impact'] == 'HIGH'])
+                        st.metric("High Impact Changes", high_impact_changes)
+                    with col3:
+                        medium_impact_changes = len(df_quick[df_quick['Impact'] == 'MEDIUM'])
+                        st.metric("Medium Impact Changes", medium_impact_changes)
+                    
+                    st.markdown("---")
+                    
+                    # Filter by impact
+                    impact_filter_quick = st.selectbox("Filter by Impact", ["All", "HIGH", "MEDIUM", "LOW"], key="quick_filter")
+                    
+                    if impact_filter_quick != "All":
+                        df_quick = df_quick[df_quick['Impact'] == impact_filter_quick]
+                    
+                    st.subheader(f"📋 Changes Only ({len(df_quick)} products)")
+                    
+                    # Display the simplified table
+                    st.dataframe(
+                        df_quick,
+                        use_container_width=True,
+                        height=600
+                    )
+                    
+                    # Download quick review
+                    st.markdown("---")
+                    csv_quick = df_quick.to_csv(index=False)
+                    st.download_button(
+                        label="⬇️ Download Quick Review CSV",
+                        data=csv_quick,
+                        file_name=f"quick_review_{st.session_state.get('gmc_file', 'gmc_feed')}.csv",
+                        mime="text/csv"
+                    )
+                else:
+                    st.info("ℹ️ No changes were made to any products. All optimizations resulted in 'no optimization needed'.")
             
         else:
             st.warning("⚠️ No optimizations found. Please run 'Strategic Optimization' first.")
